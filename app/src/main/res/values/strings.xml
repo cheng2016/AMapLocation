@@ -1,0 +1,17 @@
+<resources>
+    <string name="app_name">WecareLocation</string>
+
+
+    <string name="notifyTitle">提示</string>
+    <string name="notifyMsg">当前应用缺少必要权限。\n\n请点击\"设置\"-\"权限\"-打开所需权限。</string>
+    <string name="setting">设置</string>
+    <string name="cancel">取消</string>
+
+    <string name="start">开始</string>
+    <string name="stop">停止</string>
+    <string name="locationPurpose">场景定位</string>
+    <string name="locationPurpose_dec">展示根据场景进行定位，设置场景后SDK内部会帮助设置相关属性</string>
+
+    <string name="startLocation">开始定位</string>
+    <string name="stopLocation">停止定位</string>
+</resources>
