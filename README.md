@@ -5,13 +5,15 @@
 
 ## The main function
 
-- 使用Socket与服务器进行TCP通信
+- 使用 Socket 与服务器进行 TCP 通信
 
-- 集成GPS原始数据采集功能
+- 集成 GPS 原始数据采集功能
 
-- 根据卫星数量自动切换GPS数据定位或高德定位
+- 根据卫星数量自动切换 GPS 数据定位或高德定位
 
-- 使用GreenDao存储离线GPS定位数据，上线后自动上传离线GPS数据
+- 使用 GreenDao 存储离线 GPS 定位数据，上线后自动上传离线 GPS 数据
+
+- 集成 Protobuf 数据传输格式
 
   
 
