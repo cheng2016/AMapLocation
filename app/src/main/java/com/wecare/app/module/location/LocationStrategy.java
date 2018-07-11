@@ -1,7 +1,4 @@
-package com.wecare.app.module.main.location;
-
-import android.content.Context;
-import android.location.Location;
+package com.wecare.app.module.location;
 
 public interface LocationStrategy {
     void requestLocation();

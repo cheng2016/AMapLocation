@@ -1,7 +1,6 @@
 package com.wecare.app.module.main;
 
 import android.Manifest;
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -30,11 +29,11 @@ import com.wecare.app.data.entity.QueryBusinessReq;
 import com.wecare.app.data.entity.QueryBusinessResp;
 import com.wecare.app.data.source.remote.HttpApi;
 import com.wecare.app.data.source.remote.HttpFactory;
-import com.wecare.app.module.main.location.AMapLocationStrategy;
-import com.wecare.app.module.main.location.GpsLocationStrategy;
-import com.wecare.app.module.main.location.LocationController;
-import com.wecare.app.module.main.location.LocationStrategy;
-import com.wecare.app.module.main.location.UpdateLocationListener;
+import com.wecare.app.module.location.AMapLocationStrategy;
+import com.wecare.app.module.location.GpsLocationStrategy;
+import com.wecare.app.module.location.LocationController;
+import com.wecare.app.module.location.LocationStrategy;
+import com.wecare.app.module.location.UpdateLocationListener;
 import com.wecare.app.util.DeviceUtils;
 import com.wecare.app.util.LocationUtils;
 import com.wecare.app.util.Logger;

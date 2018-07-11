@@ -1,4 +1,4 @@
-package com.wecare.app.module.main.location;
+package com.wecare.app.module.location;
 
 public class LocationController {
     private LocationStrategy locationStrategy;

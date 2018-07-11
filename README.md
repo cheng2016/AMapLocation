@@ -3,6 +3,19 @@
 
 
 
+## The main function
+
+- 使用Socket与服务器进行TCP通信
+
+- 集成GPS原始数据采集功能
+
+- 根据卫星数量自动切换GPS数据定位或高德定位
+
+- 使用GreenDao存储离线GPS定位数据，上线后自动上传离线GPS数据
+
+  
+
+
 ## Contact Me
 
 - Github: github.com/cheng2016

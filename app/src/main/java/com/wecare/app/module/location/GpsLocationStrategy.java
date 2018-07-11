@@ -1,4 +1,4 @@
-package com.wecare.app.module.main.location;
+package com.wecare.app.module.location;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -15,7 +15,6 @@ import android.support.v4.app.ActivityCompat;
 
 import com.wecare.app.App;
 import com.wecare.app.util.Logger;
-import com.wecare.app.util.T;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
