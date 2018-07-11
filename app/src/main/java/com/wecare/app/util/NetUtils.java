@@ -25,6 +25,18 @@ public class NetUtils {
     }
 
     /**
+     * 获取活动网络信息
+     *
+     * @param context 上下文
+     * @return NetworkInfo
+     */
+    private static NetworkInfo getActiveNetworkInfo(Context context) {
+        ConnectivityManager cm = (ConnectivityManager) context
+                .getSystemService(Context.CONNECTIVITY_SERVICE);
+        return cm.getActiveNetworkInfo();
+    }
+
+    /**
      * 判断是否网络连接
      * 需添加权限<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
      */
@@ -75,6 +87,11 @@ public class NetUtils {
     public static int getNetworkTpye(Context context) {
         TelephonyManager telephonyManager = (TelephonyManager) context
                 .getSystemService(Context.TELEPHONY_SERVICE);
+
+        NetworkInfo info = getActiveNetworkInfo(context);
+        if (info.getType() == ConnectivityManager.TYPE_WIFI) {
+            return NETWORK_WIFI;
+        }
         switch (telephonyManager.getNetworkType()) {
             case TelephonyManager.NETWORK_TYPE_GPRS:
             case TelephonyManager.NETWORK_TYPE_EDGE:

@@ -1,11 +1,10 @@
 /**
  *
  */
-package com.wecare.app.module;
+package com.wecare.app.module.main;
 
 import android.Manifest;
 import android.annotation.TargetApi;
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -16,6 +15,7 @@ import android.provider.Settings;
 import android.view.KeyEvent;
 
 import com.wecare.app.R;
+import com.wecare.app.module.BaseActivity;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -54,7 +54,7 @@ public abstract class CheckPermissionsActivity extends BaseActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (Build.VERSION.SDK_INT >= 23 && getApplicationInfo().targetSdkVersion >= 23) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && getApplicationInfo().targetSdkVersion >= 23) {
             if (isNeedCheck) {
                 checkPermissions(needPermissions);
             }

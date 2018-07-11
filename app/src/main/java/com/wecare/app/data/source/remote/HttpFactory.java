@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
+import okhttp3.Cache;
 import okhttp3.CacheControl;
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
@@ -33,7 +34,7 @@ public class HttpFactory {
         Retrofit retrofit = new Retrofit.Builder()
                 .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
                 .addConverterFactory(GsonConverterFactory.create())
-                .baseUrl(HttpApi.yt_url)
+                .baseUrl(HttpApi.base_url)
                 .client(getOkClient())
                 .build();
         return retrofit.create(service);
@@ -44,7 +45,7 @@ public class HttpFactory {
         final File httpCacheDirectory = new File(App.getInstance().getCacheDir(), "okhttpCache");
         Log.i(TAG, httpCacheDirectory.getAbsolutePath());
         //设置缓存 10M
-//        Cache cache = new Cache(httpCacheDirectory, 10 * 1024 * 1024);   //缓存可用大小为10M
+        Cache cache = new Cache(httpCacheDirectory, 10 * 1024 * 1024);   //缓存可用大小为10M
 
         OkHttpClient okHttpClient = new OkHttpClient().newBuilder()
                 .writeTimeout(30 * 1000, TimeUnit.MILLISECONDS)
@@ -52,9 +53,9 @@ public class HttpFactory {
                 .connectTimeout(15 * 1000, TimeUnit.MILLISECONDS)
                 //设置拦截器，显示日志信息
                 .addInterceptor(httpLoggingInterceptor)
-//                .addNetworkInterceptor(REWRITE_CACHE_CONTROL_INTERCEPTOR)
-//                .addInterceptor(REWRITE_CACHE_CONTROL_INTERCEPTOR)
-//                .cache(cache)
+                .addNetworkInterceptor(REWRITE_CACHE_CONTROL_INTERCEPTOR)
+                .addInterceptor(REWRITE_CACHE_CONTROL_INTERCEPTOR)
+                .cache(cache)
                 .build();
         return okHttpClient;
     }
@@ -76,8 +77,8 @@ public class HttpFactory {
 
             Response originalResponse = chain.proceed(request);
             switch (netWorkState) {
-                case NetUtils.NETWORK_MOBILE://moblie network 情况下缓存15s
-                    int maxAge = 0;
+                case NetUtils.NETWORK_MOBILE://moblie network 情况下缓存5s
+                    int maxAge = 5;
                     return originalResponse.newBuilder()
                             .removeHeader("Pragma")
                             .removeHeader("Cache-Control")
@@ -92,7 +93,7 @@ public class HttpFactory {
                             .build();
 
                 case NetUtils.NETWORK_NONE://none network 情况下离线缓存4周
-                    int maxStale = 60 * 60 * 24 * 4 * 7;
+                    int maxStale = 60 * 60 * 24 * 7 * 4;
                     return originalResponse.newBuilder()
                             .removeHeader("Pragma")
                             .removeHeader("Cache-Control")

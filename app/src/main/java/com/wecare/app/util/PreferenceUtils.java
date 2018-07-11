@@ -1,4 +1,4 @@
-package com.wecare.app.data.source.local;
+package com.wecare.app.util;
 
 import android.content.Context;
 import android.content.SharedPreferences;

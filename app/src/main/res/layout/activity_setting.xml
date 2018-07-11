@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/app_background"
+    android:orientation="vertical">
+
+    <include layout="@layout/actionbar_nomal" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/widget_min_size_1"
+        android:layout_alignParentTop="true"
+        android:background="#4c4e56" />
+
+    <ListView
+        android:id="@+id/list_view"
+        android:layout_width="match_parent"
+        android:fadeScrollbars="false"
+        android:scrollbars="vertical"
+        android:layout_height="match_parent" />
+</LinearLayout>
