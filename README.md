@@ -18,6 +18,10 @@ GPS原始定位 VS 高德地位的一个实例，根据GPS卫星数量自动切�
 
 - 使用策略模式实现切换定位模式
 
+- 使用 bindService 模式启动 Service
+
+- 使用 IntentService 上传文件
+
 
 
 ## Contact Me
