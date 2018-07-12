@@ -14,6 +14,10 @@ public class LocationController {
         requestLocation();
     }
 
+    public LocationStrategy getLocationStrategy() {
+        return locationStrategy;
+    }
+
     public void requestLocation() {
         locationStrategy.requestLocation();
     }

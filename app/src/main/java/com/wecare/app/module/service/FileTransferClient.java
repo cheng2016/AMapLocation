@@ -1,8 +1,5 @@
 package com.wecare.app.module.service;
 
-import android.os.Handler;
-
-import com.wecare.app.App;
 import com.wecare.app.util.Constact;
 import com.wecare.app.util.StringTcpUtils;
 

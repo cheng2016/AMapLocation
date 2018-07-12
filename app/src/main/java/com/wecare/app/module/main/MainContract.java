@@ -18,30 +18,12 @@ public interface MainContract {
 
         void showStates(String message);
 
-        void setImageResouse(String url);
+        void queryZxingQrSuccess(String url);
 
-        void excuteBusiness(QueryBusinessResp resp);
+        void queryBusinessSucess(QueryBusinessResp resp);
     }
 
     interface Presenter extends BasePresenter {
-        /**
-         * 初始化定位组件
-         */
-        void initLocation();
-
-        /**
-         * 开始定位
-         */
-        void startLocation();
-
-        /**
-         * 停止定位
-         */
-        void stopLocation();
-        /**
-         * 销毁定位
-         */
-        void destroyLocation();
 
         void takePicture(Context context, long createtime, int cameraid, String key);
 

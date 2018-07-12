@@ -7,7 +7,6 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
-import android.view.KeyEvent;
 
 import com.wecare.app.module.service.SocketService;
 import com.wecare.app.util.Logger;
@@ -41,7 +40,8 @@ public abstract class BaseActivity extends AppCompatActivity {
         TAG = this.getClass().getSimpleName();
         super.onCreate(savedInstanceState);
         setContentView(getLayoutId());
-        init(savedInstanceState);
+        initView();
+        initData(savedInstanceState);
         Intent intent = new Intent(this, SocketService.class);
         intent.putExtra("from", TAG);
         bindService(intent,mServiceConnection,BIND_AUTO_CREATE);
@@ -49,7 +49,9 @@ public abstract class BaseActivity extends AppCompatActivity {
 
     protected abstract int getLayoutId();
 
-    protected abstract void init(Bundle savedInstanceState);
+    protected abstract void initView();
+
+    protected abstract void initData(Bundle savedInstanceState);
 
     @Override
     protected void onDestroy() {

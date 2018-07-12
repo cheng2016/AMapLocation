@@ -7,35 +7,34 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.location.Location;
 import android.os.Bundle;
-import android.os.Handler;
+import android.support.v7.widget.AppCompatImageView;
 import android.text.TextUtils;
 import android.view.KeyEvent;
 import android.view.View;
 import android.widget.Button;
-import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.amap.api.location.AMapLocation;
+import com.bumptech.glide.Glide;
 import com.squareup.picasso.Picasso;
 import com.wecare.app.App;
 import com.wecare.app.R;
 import com.wecare.app.data.entity.LocationData;
 import com.wecare.app.data.entity.QueryBusinessResp;
 import com.wecare.app.data.source.local.LocationDaoUtils;
-import com.wecare.app.util.NetUtils;
-import com.wecare.app.util.PreferenceConstants;
-import com.wecare.app.util.PreferenceUtils;
 import com.wecare.app.module.service.UploadService;
 import com.wecare.app.module.setting.SettingActivity;
 import com.wecare.app.util.AMapUtils;
 import com.wecare.app.util.Constact;
 import com.wecare.app.util.Logger;
+import com.wecare.app.util.NetUtils;
+import com.wecare.app.util.PreferenceConstants;
+import com.wecare.app.util.PreferenceUtils;
 import com.wecare.app.util.StringTcpUtils;
 import com.wecare.app.util.T;
 
 public class MainActivity extends CheckPermissionsActivity implements MainContract.View, View.OnClickListener {
     public static final long ONE_DAY = 24 * 60 * 60 * 1000L;
-
 
     private Button btLocation, thridLocation;
 
@@ -43,9 +42,7 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
 
     public MainPresenter mMainPresenter;
 
-    private ImageView centerImage;
-
-//    private QueryBusinessResp mQueryBusinessResp;
+    private AppCompatImageView centerImage;
 
     private boolean showZxing = true;
 
@@ -55,9 +52,9 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
 
     private String nickName;
 
-    Intent serviceIntent;
+//    private Handler handler = new Handler();
 
-    private Handler handler = new Handler();
+    private LocationDaoUtils mLocationDaoUtils;
 
     @Override
     protected int getLayoutId() {
@@ -65,7 +62,7 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
     }
 
     @Override
-    protected void init(Bundle savedInstanceState) {
+    protected void initView() {
         zxingTitleTv = findViewById(R.id.zxing_title_tv);
         zxingCodeTv = findViewById(R.id.zxing_code_tv);
 
@@ -84,22 +81,19 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
         findViewById(R.id.tackPicture_btn).setOnClickListener(this);
         findViewById(R.id.record_btn).setOnClickListener(this);
 
-        new MainPresenter(this, MainActivity.this);
-        mMainPresenter.subscribe();
-
-        registerActionReceiver();
-
         findViewById(R.id.back_layout).setVisibility(View.GONE);
         findViewById(R.id.right_layout).setVisibility(View.VISIBLE);
         findViewById(R.id.right_layout).setOnClickListener(this);
         findViewById(R.id.zxing_bottom_layout).setOnClickListener(this);
+    }
 
-//        serviceIntent = new Intent(this, SocketService.class);
-//        serviceIntent.putExtra("from", TAG);
-//        startService(serviceIntent);
+    @Override
+    protected void initData(Bundle savedInstanceState) {
+        new MainPresenter(this, MainActivity.this);
+//        mMainPresenter.subscribe();
+        registerActionReceiver();
         headUrl = PreferenceUtils.getPrefString(this, PreferenceConstants.HEAD_URL, "");
         nickName = PreferenceUtils.getPrefString(this, PreferenceConstants.NICK_NAME, "");
-//        qrUrl = PreferenceUtils.getPrefString(this, PreferenceConstants.QR_URL,"");
         if (!TextUtils.isEmpty(headUrl) && !TextUtils.isEmpty(nickName)) {
             showZxing = false;
             Picasso.with(MainActivity.this).load(headUrl).transform(new PicassoRoundTransform()).into(centerImage);
@@ -108,90 +102,26 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
             zxingCodeTv.setVisibility(View.VISIBLE);
         }
         mMainPresenter.queryZxingQr();
-        /*if(!TextUtils.isEmpty(qrUrl)){
-            Picasso.with(MainActivity.this).load(qrUrl).transform(new PicassoRoundTransform()).into(centerImage);
-            zxingTitleTv.setText("扫码绑定后视镜");
-            zxingCodeTv.setText("微信码：FSDFWEQRRQWEWQ");
-            zxingCodeTv.setVisibility(View.INVISIBLE);
-        }else{
-            mMainPresenter.queryZxingQr();
-        }*/
-//        mMainPresenter.startLocation();
 
-        mMainPresenter.requestGpsCount();
+//        mMainPresenter.requestGpsCount();
 
 //        mMainPresenter.initLocation();
 //        mMainPresenter.startLocation();
 
-//        mMainPresenter.requestLocation();
-        handler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                mMainPresenter.queryZxingQr();
-                handler.postDelayed(this,ONE_DAY);
-            }
-        },ONE_DAY);
+        mMainPresenter.requestLocation();
     }
-
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
         unregisterActionReceiver();
         mMainPresenter.unsubscribe();
-        mMainPresenter.stopGpsLocation();
-//        stopService(serviceIntent);
+//        mMainPresenter.stopGpsLocation();
     }
 
     @Override
     public void onClick(View v) {
         switch (v.getId()) {
-            case R.id.location_btn:
-                if (btLocation.getText().equals(
-                        getResources().getString(R.string.startLocation))) {
-                    btLocation.setText(getResources().getString(
-                            R.string.stopLocation));
-                    tvResult.setText("正在定位...");
-//                    mMainPresenter.startGpsLocation();
-//                    mMainPresenter.requestGpsLocation(this);
-                } else {
-                    btLocation.setText(getResources().getString(
-                            R.string.startLocation));
-                    tvResult.setText("定位停止");
-//                    mMainPresenter.stopGpsLocation();
-//                    mMainPresenter.stopRequestGpsLocation(this);
-                }
-                break;
-            case R.id.thrid_location_btn:
-                if (thridLocation.getText().equals(
-                        getResources().getString(R.string.startLocation))) {
-                    thridLocation.setText(getResources().getString(
-                            R.string.stopLocation));
-                    thridResult.setText("正在定位...");
-                    mMainPresenter.startLocation();
-                } else {
-                    thridLocation.setText(getResources().getString(
-                            R.string.startLocation));
-                    thridResult.setText("定位停止");
-                    mMainPresenter.stopLocation();
-                }
-                break;
-
-            case R.id.connect_btn:
-//                mSocketService.connectServer();
-                break;
-            case R.id.receive_btn:
-//                mSocketService.receiveMsg();q
-                break;
-            case R.id.send_btn:
-//                mSocketService.sendMessage(StringTcpUtils.buildHeartReq(DeviceUtils.getDeviceIMEI(App.getInstance())));
-                break;
-            case R.id.tackPicture_btn:
-                mMainPresenter.takePicture(this, System.currentTimeMillis(), 0, MY_KEY);
-                break;
-            case R.id.record_btn:
-                mMainPresenter.takeMicroRecord(this, System.currentTimeMillis(), 0, MY_KEY);
-                break;
             case R.id.right_layout:
                 Intent intent = new Intent();
                 intent.setClass(MainActivity.this, SettingActivity.class);
@@ -201,6 +131,9 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
                 if (showZxing && !TextUtils.isEmpty(nickName) && !TextUtils.isEmpty(headUrl)) {
                     showZxing = false;
                     Picasso.with(MainActivity.this).load(headUrl).transform(new PicassoRoundTransform()).into(centerImage);
+
+//                    Glide.with(this).load(headUrl).centerCrop().transform(new GlideRoundTransform(this)).into(centerImage);
+
                     zxingTitleTv.setText(nickName);
                     zxingCodeTv.setText("点击可切换 头像/二维码");
                     zxingCodeTv.setVisibility(View.VISIBLE);
@@ -208,13 +141,15 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
                     if (!TextUtils.isEmpty(qrUrl)) {
                         showZxing = true;
                         Picasso.with(MainActivity.this).load(qrUrl).transform(new PicassoRoundTransform()).into(centerImage);
+
+//                        Glide.with(this).load(qrUrl).centerCrop().transform(new GlideRoundTransform(this)).into(centerImage);
+
                         zxingTitleTv.setText("扫码绑定后视镜");
                         zxingCodeTv.setVisibility(View.INVISIBLE);
                     }
                 }
                 break;
             case R.id.center_img:
-//                mMainPresenter.startGpsLocation(this);
                 mMainPresenter.requestGpsCount();
                 break;
             default:
@@ -228,7 +163,6 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
         mMainPresenter = (MainPresenter) presenter;
     }
 
-    LocationDaoUtils mLocationDaoUtils;
 
     @Override
     public void onLocationChanged(Location location, int gpsCount, long lastPositionTime) {
@@ -237,15 +171,15 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
             Logger.i(TAG, "onLocationChanged success，location ：经    度：" + location.getLongitude() + " 纬    度：" + location.getLatitude());
             positionType = 4;
             T.showShort(this, "高德定位成功！");
-        }else{
-            T.showShort(this, "GPS定位成功：");
+        } else {
+            T.showShort(this, "GPS定位成功！");
             positionType = 1;
         }
         String content = StringTcpUtils.buildGpsContent(location.getLongitude(), location.getLatitude(), location.getAltitude(),
                 location.getSpeed(), location.getBearing(), gpsCount, location.getAccuracy(), positionType, location.getTime(), lastPositionTime, "");
         content = StringTcpUtils.buildGpsString(App.getInstance().IMEI, content);
         if (mSocketService != null && NetUtils.isConnected(this)) {
-            if ( mSocketService.isConnect()) {
+            if (mSocketService.isConnect()) {
                 mSocketService.sendMessage(content);
             } else {
                 mSocketService.initSocketClient();
@@ -259,9 +193,6 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
             mLocationDaoUtils.insert(data);
         }
         zxingTitleTv.setText("定位成功，经    度：" + location.getLongitude() + " 纬    度：" + location.getLatitude());
-//        Intent intent = new Intent("com.example.communication.RECEIVER");
-//        intent.putExtra("message",content);
-//        sendBroadcast(intent);
     }
 
     @Override
@@ -270,21 +201,24 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
     }
 
     @Override
-    public void setImageResouse(String url) {
+    public void queryZxingQrSuccess(String url) {
         qrUrl = url;
-//        PreferenceUtils.setPrefString(this,PreferenceConstants.QR_URL,url);
+//        mMainPresenter.requestGpsCount();
         if (!TextUtils.isEmpty(headUrl) && !TextUtils.isEmpty(nickName)) {
             return;
         }
         showZxing = true;
-        Picasso.with(MainActivity.this).load(url).transform(new PicassoRoundTransform()).into(centerImage);
+//        Picasso.with(this).load(url).transform(new PicassoRoundTransform()).into(centerImage);
+
+        Glide.with(this).load(url).centerCrop().transform(new GlideRoundTransform(this)).into(centerImage);
+
         zxingTitleTv.setText("扫码绑定后视镜");
         zxingCodeTv.setText("微信码：FSDFWEQRRQWEWQ");
         zxingCodeTv.setVisibility(View.INVISIBLE);
     }
 
     @Override
-    public void excuteBusiness(QueryBusinessResp resp) {
+    public void queryBusinessSucess(QueryBusinessResp resp) {
         if (resp != null && resp.getData() != null && !TextUtils.isEmpty(resp.getData().getHead_image_url())) {
             showZxing = false;
             headUrl = resp.getData().getHead_image_url();
@@ -426,7 +360,7 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
                         statesTv.setText("上传成功");
                         break;
                     case Constact.COMMAND_LOCATION:
-                        mMainPresenter.startLocation();
+//                        mMainPresenter.startLocation();
                         break;
                     case Constact.COMMAND_GO_NAVI:
                         mMainPresenter.queryBusiness(Constact.COMMAND_GO_NAVI + "");

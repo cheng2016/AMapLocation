@@ -30,12 +30,8 @@ public class SettingActivity extends BaseActivity {
     }
 
     @Override
-    protected void init(Bundle savedInstanceState) {
-//        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+    protected void initView() {
         listView = findViewById(R.id.list_view);
-        getData();//获取数据
-        SettingAdapter adapter = new SettingAdapter();
-        listView.setAdapter(adapter);
         findViewById(R.id.back_layout).setVisibility(View.VISIBLE);
         findViewById(R.id.right_layout).setVisibility(View.GONE);
         findViewById(R.id.back_layout).setOnClickListener(new View.OnClickListener() {
@@ -45,19 +41,13 @@ public class SettingActivity extends BaseActivity {
             }
         });
         titleTV = findViewById(R.id.title);
-        titleTV.setText("设备信息");
     }
 
-/*    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        finish();
-        return super.onOptionsItemSelected(item);
-    }*/
-
-    void getData() {
+    @Override
+    protected void initData(Bundle savedInstanceState) {
+        titleTV.setText("设备信息");
         mDataList.clear();
         mDataList.add(new DeviceBean("IMEI", DeviceUtils.getDeviceIMEI(this)));
-//        mDataList.add(new DeviceBean("微信码", ""));
         mDataList.add(new DeviceBean("型号", SystemUtils.getSystemModel()));
         mDataList.add(new DeviceBean("运行内存 ", DeviceUtils.getSysteTotalMemorySize(this)));
         mDataList.add(new DeviceBean("系统容量", "总容量:" + DeviceUtils.getTotalInternalStorgeSize() + "-可用:" + DeviceUtils.getAvailableInternalStorgeSize()));
@@ -65,6 +55,8 @@ public class SettingActivity extends BaseActivity {
         mDataList.add(new DeviceBean("版本号", SystemUtils.getSystemVersion()));
         mDataList.add(new DeviceBean("序列号", SystemUtils.getSerialNumber()));
         mDataList.add(new DeviceBean("ICCID", SystemUtils.getICCID(this)));
+        SettingAdapter adapter = new SettingAdapter();
+        listView.setAdapter(adapter);
     }
 
     class SettingAdapter extends BaseAdapter {
@@ -98,7 +90,7 @@ public class SettingActivity extends BaseActivity {
                 holder = (ViewHolder) convertView.getTag();
             }
 
-            if (mDataList != null && mDataList.size() > 0) {
+            if (!mDataList.isEmpty()) {
                 DeviceBean bean = mDataList.get(position);
                 holder.titleTv.setText(bean.getName());
                 holder.contentTv.setText(bean.getValue());

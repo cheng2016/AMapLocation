@@ -39,7 +39,11 @@ public class GpsLocationStrategy implements LocationStrategy {
 
     private UpdateLocationListener listener;
 
-    boolean isRequestLocation = false;
+    private AMapLocationStrategy aMapLocationStrategy;
+
+    private boolean isRequestGps = false;
+
+    private boolean isRequestAmap = false;
 
     public GpsLocationStrategy(Context context) {
         this.context = context;
@@ -58,15 +62,15 @@ public class GpsLocationStrategy implements LocationStrategy {
             return;
         }
         mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, mMinDistance, mGPSLocationListener);
-//        mLocationManager.addGpsStatusListener(mGpsStatusCallback);
-        isRequestLocation = true;
+        mLocationManager.addGpsStatusListener(mGpsStatusCallback);
+        isRequestGps = true;
     }
 
     @Override
     public void stopLocation() {
         mLocationManager.removeUpdates(mGPSLocationListener);
-//        mLocationManager.removeGpsStatusListener(mGpsStatusCallback);
-        isRequestLocation = false;
+        mLocationManager.removeGpsStatusListener(mGpsStatusCallback);
+        isRequestGps = false;
     }
 
     LocationListener mGPSLocationListener = new LocationListener() {
@@ -165,6 +169,7 @@ public class GpsLocationStrategy implements LocationStrategy {
 
     private List<GpsSatellite> numSatelliteList = new ArrayList<>();
 
+
     private void updateGpsStatus(int event, GpsStatus status) {
         if (event == GpsStatus.GPS_EVENT_SATELLITE_STATUS) {
             int maxSatellites = status.getMaxSatellites();
@@ -180,24 +185,39 @@ public class GpsLocationStrategy implements LocationStrategy {
                 }
             }
             mGpsCount = numSatelliteList.size();
-           /* if (mGpsCount >= 3) {
-                strategy.stopLocation();
-                if(!isRequestLocation){
-                    if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                            && ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                        return;
-                    }
-                    mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, mMinDistance, mGPSLocationListener);
-                    isRequestLocation = true;
+//            Logger.i(TAG, "updateGpsStatus mGpsCount：" + mGpsCount);
+            changeLocationMode();
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private void changeLocationMode() {
+        if (mGpsCount >= 3) {
+            if (isRequestAmap) {
+                aMapLocationStrategy.stopLocation();
+                aMapLocationStrategy.setListener(null);
+                isRequestAmap = false;
+            }
+
+            if (!isRequestGps) {
+                mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, mMinDistance, mGPSLocationListener);
+                isRequestGps = true;
+            }
+            return;
+        } else {
+            if (isRequestGps) {
+                mLocationManager.removeUpdates(mGPSLocationListener);
+                isRequestGps = false;
+            }
+
+            if (!isRequestAmap) {
+                if (aMapLocationStrategy == null) {
+                    aMapLocationStrategy = new AMapLocationStrategy(context);
                 }
-            } else {
-                if(isRequestLocation){
-                    mLocationManager.removeUpdates(mGPSLocationListener);
-                    isRequestLocation = false;
-                }
-                strategy.requestLocation();
-            }*/
-            Logger.i(TAG, "updateGpsStatus mGpsCount：" + mGpsCount);
+                aMapLocationStrategy.requestLocation();
+                aMapLocationStrategy.setListener(listener);
+                isRequestAmap = true;
+            }
         }
     }
 }

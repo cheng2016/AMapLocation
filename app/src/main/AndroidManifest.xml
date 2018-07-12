@@ -42,8 +42,6 @@
     <!-- 3.2.0版本增加 -->
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <!-- 3.2.0版本增加 -->
-    <uses-permission android:name="android.permission.BLUETOOTH" />
-
     <application
         android:name=".App"
         android:allowBackup="true"
@@ -52,6 +50,12 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppMvpTheme">
+
+        <!--自定义Glide全局设置-->
+        <meta-data
+            android:name="com.wecare.app.module.main.MyGlideModule"
+            android:value="GlideModule" />
+
 
         <!-- 设置key
         870a40379ea43b3cb71be0c695d54daa
@@ -72,13 +76,14 @@
         <!-- 网络广播接受者,我们需要在AndroidManifest.xml中配置 -->
         <receiver android:name=".module.service.NetworkStateReceiver">
             <intent-filter>
-                <action android:name="android.net.conn.CONNECTIVITY_CHANGE"/>
+                <action android:name="android.net.conn.CONNECTIVITY_CHANGE" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </receiver>
 
 
-        <activity android:name=".module.main.MainActivity"
+        <activity
+            android:name=".module.main.MainActivity"
             android:launchMode="singleTop">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -87,7 +92,9 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".module.setting.SettingActivity"/>
+        <activity android:name=".module.setting.SettingActivity" />
     </application>
+
+    <uses-permission android:name="android.permission.BLUETOOTH" />
 
 </manifest>

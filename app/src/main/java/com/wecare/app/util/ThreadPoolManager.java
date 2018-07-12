@@ -1,7 +1,6 @@
 package com.wecare.app.util;
 
 import java.util.concurrent.BlockingDeque;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.RejectedExecutionHandler;

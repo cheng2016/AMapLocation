@@ -266,7 +266,7 @@ public class Logger {
         if (isSDCardOK()) {
             logFoldPath = Environment.getExternalStorageDirectory() + "/wecare/logger/";
         } else {
-            logFoldPath = appCtx.getExternalCacheDir().getAbsolutePath() + "/../logger/log";
+            logFoldPath = appCtx.getCacheDir().getAbsolutePath() + "/../logger/log";
         }
         pkgName = appCtx.getPackageName();
         myPid = Process.myPid();
