@@ -24,6 +24,7 @@ GPS原始定位 VS 高德地位的一个实例，根据GPS卫星数量自动切�
 
 - 使用 IntentService 上传文件
 
+- 使用 broadcast 进行 activity 与 service 的数据交互 
 
 
 ## Contact Me
