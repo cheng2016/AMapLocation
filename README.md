@@ -1,6 +1,5 @@
 # AMapLocation
-高德地图地位的一个实例。
-
+GPS原始定位 VS 高德地位的一个实例，根据GPS卫星数量自动切换定位模式。
 
 
 ## The main function
@@ -15,7 +14,10 @@
 
 - 集成 Protobuf 数据传输格式
 
-  
+- App 采用 MVP 架构
+
+- 使用策略模式实现切换定位模式
+
 
 
 ## Contact Me
