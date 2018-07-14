@@ -71,6 +71,8 @@
 
         <service android:name=".module.service.SocketService" />
 
+        <service android:name=".module.netty.NettyService"/>
+
         <service android:name=".module.service.UploadService" />
 
         <!-- 网络广播接受者,我们需要在AndroidManifest.xml中配置 -->

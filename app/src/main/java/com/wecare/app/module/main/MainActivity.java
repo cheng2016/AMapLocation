@@ -108,7 +108,7 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
 //        mMainPresenter.initLocation();
 //        mMainPresenter.startLocation();
 
-        mMainPresenter.requestLocation();
+//        mMainPresenter.requestLocation();
     }
 
     @Override
@@ -150,7 +150,7 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
                 }
                 break;
             case R.id.center_img:
-                mMainPresenter.requestGpsCount();
+                mMainPresenter.requestLocation();
                 break;
             default:
                 break;
@@ -170,7 +170,7 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
         if (location instanceof AMapLocation) {
             Logger.i(TAG, "onLocationChanged success，location ：经    度：" + location.getLongitude() + " 纬    度：" + location.getLatitude());
             positionType = 4;
-            T.showShort(this, "高德定位成功！");
+            T.showShort(this, "高德定位成功：" + ((AMapLocation) location).getAddress());
         } else {
             T.showShort(this, "GPS定位成功！");
             positionType = 1;
@@ -179,11 +179,12 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
                 location.getSpeed(), location.getBearing(), gpsCount, location.getAccuracy(), positionType, location.getTime(), lastPositionTime, "");
         content = StringTcpUtils.buildGpsString(App.getInstance().IMEI, content);
         if (mSocketService != null && NetUtils.isConnected(this)) {
-            if (mSocketService.isConnect()) {
+/*            if (mSocketService.isConnect()) {
                 mSocketService.sendMessage(content);
             } else {
                 mSocketService.initSocketClient();
-            }
+            }*/
+            mSocketService.sendMessage(content);
         } else {
             if (mLocationDaoUtils == null) {
                 mLocationDaoUtils = new LocationDaoUtils(this);
@@ -359,9 +360,6 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
                         T.showShort(MainActivity.this, "上传成功");
                         statesTv.setText("上传成功");
                         break;
-                    case Constact.COMMAND_LOCATION:
-//                        mMainPresenter.startLocation();
-                        break;
                     case Constact.COMMAND_GO_NAVI:
                         mMainPresenter.queryBusiness(Constact.COMMAND_GO_NAVI + "");
                         break;
@@ -370,6 +368,10 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
                         break;
                     case Constact.COMMAND_GET_DATA:
                         mMainPresenter.queryBusiness(Constact.COMMAND_GET_DATA + "");
+                        break;
+                    case Constact.COMMAND_LOCATION:
+                        mMainPresenter.requestLocation();
+                        T.showShort(MainActivity.this,"Netty启动成功，启动定位模式！");
                         break;
                     default:
                         break;

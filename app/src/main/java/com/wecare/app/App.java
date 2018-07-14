@@ -14,15 +14,15 @@ public class App extends BaseApplication {
 
     public String BASE_URL = "47.106.148.192";
     //心跳时间
-    public long HEART_BEAT_RATE = 10 * 1000;
+    public long HEART_BEAT_RATE = 60 * 1000;
     //定位时间
     public long LOCATION_MIN_TIME = 2 * 1000;
     //最长gps上传时间（即：相同经纬度上传时间）
-    public long SAME_GPS_UPLOAD_TIME = 16 * 1000;
+    public long SAME_GPS_UPLOAD_TIME = 60 * 1000;
     //最短gps上传时间
-    public long MIN_GPS_UPLOAD_TIME = 8 * 1000;
+    public long MIN_GPS_UPLOAD_TIME = 15 * 1000;
 
-    public String IMEI;
+    public String IMEI="";
 
     public static App getInstance() {
         return mInstance;

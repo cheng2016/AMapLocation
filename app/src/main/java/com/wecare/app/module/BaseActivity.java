@@ -8,7 +8,7 @@ import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 
-import com.wecare.app.module.service.SocketService;
+import com.wecare.app.module.netty.NettyService;
 import com.wecare.app.util.Logger;
 
 /**
@@ -18,12 +18,12 @@ import com.wecare.app.util.Logger;
 public abstract class BaseActivity extends AppCompatActivity {
     public String TAG = "";
 
-    public SocketService mSocketService;
+    public NettyService mSocketService;
 
     protected ServiceConnection mServiceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
-            SocketService.MyBinder binder = (SocketService.MyBinder) service;
+            NettyService.MyBinder binder = (NettyService.MyBinder) service;
             mSocketService = binder.getService();
             Logger.v(TAG,"onServiceConnected");
         }
@@ -42,7 +42,7 @@ public abstract class BaseActivity extends AppCompatActivity {
         setContentView(getLayoutId());
         initView();
         initData(savedInstanceState);
-        Intent intent = new Intent(this, SocketService.class);
+        Intent intent = new Intent(this, NettyService.class);
         intent.putExtra("from", TAG);
         bindService(intent,mServiceConnection,BIND_AUTO_CREATE);
     }
