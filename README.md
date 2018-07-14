@@ -2,6 +2,8 @@
 GPS原始定位 VS 高德地位的一个实例，根据GPS卫星数量自动切换定位模式。
 
 
+
+
 ## The main function
 
 - 使用 Socket 与服务器进行 TCP 通信
@@ -16,6 +18,16 @@ GPS原始定位 VS 高德地位的一个实例，根据GPS卫星数量自动切�
 - 使用 bindService 模式启动 Service
 - 使用 IntentService 通过 TCP 协议上传文件
 - 使用 broadcast 进行 activity 与 service 的数据交互 
+
+
+
+
+## Question
+
+##### 使用 Handler 延时处理不准的问题：
+
+> 解决方案：另开一个 Handler 专门处理某一个任务
+
 
 
 ## Contact Me
