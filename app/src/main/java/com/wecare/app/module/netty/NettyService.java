@@ -177,26 +177,6 @@ public class NettyService extends Service {
         }
     }
 
-    public void sendMessage(String msg) {
-        Logger.e(TAG, "sendMessage：" + msg);
-        if (mChannelFuture != null && mChannelFuture.channel() != null && isConnect) {
-            //不是心跳则直接发送该消息
-            if(!HEART_BEAT_STRING.equals(msg)){
-                mChannelFuture.channel().writeAndFlush(msg);
-            }
-            //心跳补偿机制，每次发送消息时判断是否心跳包时间间隔到达指定时间
-            if(System.currentTimeMillis() - sendTime >= App.getInstance().HEART_BEAT_RATE){
-                //移除之前的心跳定时任务，马上发送心跳
-                handler.removeCallbacks(heartRunnable);
-                mChannelFuture.channel().writeAndFlush(HEART_BEAT_STRING);
-                Logger.i(TAG, "发送心跳时间间隔为：" + ((System.currentTimeMillis() - sendTime) / 1000)
-                        + "s  约定心跳间隔为：" + (App.getInstance().HEART_BEAT_RATE / 1000) + "s");
-            }
-        } else {
-            initNettySocket();
-        }
-    }
-
     class NettyClientHandler extends ChannelInboundHandlerAdapter {
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
@@ -272,6 +252,26 @@ public class NettyService extends Service {
             cause.printStackTrace();
             ctx.close();
             isConnect = false;
+        }
+    }
+
+    public void sendMessage(String msg) {
+        Logger.e(TAG, "sendMessage：" + msg);
+        if (mChannelFuture != null && mChannelFuture.channel() != null && isConnect) {
+            //不是心跳则直接发送该消息
+            if(!HEART_BEAT_STRING.equals(msg)){
+                mChannelFuture.channel().writeAndFlush(msg);
+            }
+            //心跳补偿机制，每次发送消息时判断是否心跳包时间间隔到达指定时间
+            if(System.currentTimeMillis() - sendTime >= App.getInstance().HEART_BEAT_RATE){
+                //移除之前的心跳定时任务，马上发送心跳
+                handler.removeCallbacks(heartRunnable);
+                mChannelFuture.channel().writeAndFlush(HEART_BEAT_STRING);
+                Logger.i(TAG, "发送心跳时间间隔为：" + ((System.currentTimeMillis() - sendTime) / 1000)
+                        + "s  约定心跳间隔为：" + (App.getInstance().HEART_BEAT_RATE / 1000) + "s");
+            }
+        } else {
+            initNettySocket();
         }
     }
 
