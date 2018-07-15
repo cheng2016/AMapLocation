@@ -181,6 +181,12 @@ public class NettyService extends Service {
         Logger.e(TAG, "sendMessage：" + msg);
         if (mChannelFuture != null && mChannelFuture.channel() != null && isConnect) {
             mChannelFuture.channel().writeAndFlush(msg);
+            //心跳补偿机制，每次发送消息时判断是否心跳包时间间隔到达指定时间
+            if(System.currentTimeMillis() - sendTime >= App.getInstance().HEART_BEAT_RATE){
+                //移除之前的心跳定时任务，马上发送心跳
+                handler.removeCallbacks(heartRunnable);
+                mChannelFuture.channel().writeAndFlush(HEART_BEAT_STRING);
+            }
         } else {
             initNettySocket();
         }
