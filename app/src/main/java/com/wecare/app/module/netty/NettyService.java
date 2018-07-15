@@ -230,7 +230,7 @@ public class NettyService extends Service {
                     App.getInstance().HOST = results[2];
                     App.getInstance().MIN_GPS_UPLOAD_TIME = Integer.valueOf(results[3]) * 1000L;
                     App.getInstance().SAME_GPS_UPLOAD_TIME = Integer.valueOf(results[4]) * 1000L;
-                    App.getInstance().HEART_BEAT_RATE = Integer.valueOf(results[5]) * 1000L;
+//                    App.getInstance().HEART_BEAT_RATE = Integer.valueOf(results[5]) * 1000L;
 
                     Intent intent = new Intent(MainActivity.ACTION_RECEIVER_COMMAND);
                     intent.putExtra("command_type", Constact.COMMAND_LOCATION);
