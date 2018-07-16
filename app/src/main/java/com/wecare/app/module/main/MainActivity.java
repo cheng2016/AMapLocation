@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.location.Location;
+import android.net.ConnectivityManager;
 import android.os.Bundle;
 import android.support.v7.widget.AppCompatImageView;
 import android.text.TextUtils;
@@ -22,6 +23,7 @@ import com.wecare.app.R;
 import com.wecare.app.data.entity.LocationData;
 import com.wecare.app.data.entity.QueryBusinessResp;
 import com.wecare.app.data.source.local.LocationDaoUtils;
+import com.wecare.app.module.netty.NettyService;
 import com.wecare.app.module.service.UploadService;
 import com.wecare.app.module.setting.SettingActivity;
 import com.wecare.app.util.AMapUtils;
@@ -263,6 +265,8 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
 
     private CommandReceiver mCommandReceiver;
 
+    private NetworkStateReceiver mNetworkStateReceiver;
+
     /**
      * 注册广播监听；
      */
@@ -277,6 +281,11 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
         IntentFilter commandFilter = new IntentFilter();
         commandFilter.addAction(ACTION_RECEIVER_COMMAND);
         registerReceiver(mCommandReceiver, commandFilter);
+
+        mNetworkStateReceiver = new NetworkStateReceiver();
+        IntentFilter netIntentFilter = new IntentFilter();
+        netIntentFilter.addAction(NETWORK_RECEIVER);
+        registerReceiver(mNetworkStateReceiver,netIntentFilter);
     }
 
     /**
@@ -286,6 +295,7 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
         Logger.d(TAG, "-------------------- unRegisterReceiver------------------");
         unregisterReceiver(mReceiver);
         unregisterReceiver(mCommandReceiver);
+        unregisterReceiver(mNetworkStateReceiver);
     }
 
     /**
@@ -377,6 +387,24 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
                         break;
                 }
             }
+        }
+    }
+
+    public static final String NETWORK_RECEIVER = "android.net.conn.CONNECTIVITY_CHANGE";
+
+    /**
+     * 监听系统网络状态广播，7.0 后只支持动态注册
+     */
+    class NetworkStateReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent.getAction().equals(ConnectivityManager.CONNECTIVITY_ACTION)) {
+                if(NetUtils.isConnected(MainActivity.this)){
+                    if(mSocketService != null)
+                        mSocketService.sendMessage(NettyService.HEART_BEAT_STRING);
+                }
+            }
+            Logger.i(TAG,"NetworkStateReceiver is work！");
         }
     }
 
