@@ -28,6 +28,8 @@ GPS原始定位 VS 高德地位的一个实例，根据GPS卫星数量自动切�
 
 > 解决方案：加入相应的补偿机制，并开一个 Handler 专门处理某一个任务；或者使用AlarmManager
 
+##### 监听系统网络状态广播，7.0 后只支持动态注册
+
 
 
 ## Contact Me
@@ -40,7 +42,7 @@ GPS原始定位 VS 高德地位的一个实例，根据GPS卫星数量自动切�
 # License
 
     Copyright 2017 cheng2016,Inc.
-
+    
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
     You may obtain a copy of the License at
