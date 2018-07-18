@@ -65,6 +65,8 @@ public interface Constact {
 
     int COMMAND_WX_NAVI = 92;
 
+    int COMMAND_START_LOCATION = 99;
+
     //cameraid
     //前摄像头
     int CAMERA_FRONT = 0;

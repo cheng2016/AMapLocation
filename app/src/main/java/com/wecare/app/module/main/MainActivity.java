@@ -380,7 +380,11 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
                         mMainPresenter.queryBusiness(Constact.COMMAND_GET_DATA + "");
                         break;
                     case Constact.COMMAND_LOCATION:
+                        mMainPresenter.requestLocation(true);
+                        break;
+                    case Constact.COMMAND_START_LOCATION:
                         mMainPresenter.requestLocation();
+                        Logger.i(TAG,"TCP服务启动成功，启动定位模式！");
                         T.showShort(MainActivity.this,"Netty启动成功，启动定位模式！");
                         break;
                     default:

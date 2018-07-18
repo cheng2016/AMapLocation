@@ -27,12 +27,6 @@ public class AMapLocationStrategy implements LocationStrategy {
     //声明AMapLocationClientOption对象
     private AMapLocationClientOption mLocationOption = null;
 
-    private Location lastAMapLocation = null;
-
-    private long lastTime = 0L;
-
-    private long uploadGpsTime = 0L;
-
     private UpdateLocationListener listener;
 
     public AMapLocationStrategy(Context context) {
@@ -140,29 +134,7 @@ public class AMapLocationStrategy implements LocationStrategy {
                     sb.append("定位时间: " + Utils.formatUTC(location.getTime(), "yyyy-MM-dd HH:mm:ss") + "\n");
 //                    T.showShort(context, "currentLocation：" + sb.toString());
                     if (listener != null) {
-                        if (lastAMapLocation == null) {
-                            lastAMapLocation = location;
-                            uploadGpsTime = System.currentTimeMillis();
-                            listener.updateLocationChanged(location, location.getSatellites(), uploadGpsTime);
-                        } else {
-                            if (location.getLatitude() == lastAMapLocation.getLatitude() && location.getLongitude() == lastAMapLocation.getLongitude()) {
-                                //经纬度相同，则最上半小时上传一次经纬度
-                                if (System.currentTimeMillis() - uploadGpsTime >= App.getInstance().SAME_GPS_UPLOAD_TIME) {
-                                    uploadGpsTime = System.currentTimeMillis();
-                                    lastTime = lastAMapLocation.getTime();
-                                    lastAMapLocation = location;
-                                    listener.updateLocationChanged(location, location.getSatellites(), lastTime);
-                                }
-                            } else {
-                                //每次间隔5秒上传一次位置
-                                if (System.currentTimeMillis() - uploadGpsTime >= App.getInstance().MIN_GPS_UPLOAD_TIME) {
-                                    uploadGpsTime = System.currentTimeMillis();
-                                    lastTime = lastAMapLocation.getTime();
-                                    lastAMapLocation = location;
-                                    listener.updateLocationChanged(location, location.getSatellites(), lastTime);
-                                }
-                            }
-                        }
+                        listener.updateLocationChanged(location,location.getSatellites());
                     }
                 } else {
                     Logger.e(TAG, "onLocationChanged error，location ：" + new Gson().toJson(location));

@@ -31,12 +31,6 @@ public class GpsLocationStrategy implements LocationStrategy {
 
     private float mMinDistance = 0;
 
-    private Location lastAMapLocation = null;
-
-    private long lastTime = 0L;
-
-    private long uploadGpsTime = 0L;
-
     private int mGpsCount;
 
     private UpdateLocationListener listener;
@@ -105,36 +99,14 @@ public class GpsLocationStrategy implements LocationStrategy {
                 sb.append(mGpsCount);
 //                T.showShort(context, "currentLocation：" + sb.toString());
                 if (listener != null) {
-                    if (lastAMapLocation == null) {
-                        lastAMapLocation = location;
-                        uploadGpsTime = System.currentTimeMillis();
-                        listener.updateLocationChanged(location, mGpsCount, System.currentTimeMillis());
-                    } else {
-                        if (location.getLatitude() == lastAMapLocation.getLatitude() && location.getLongitude() == lastAMapLocation.getLongitude()) {
-                            //经纬度相同，则最上半小时上传一次经纬度
-                            if (System.currentTimeMillis() - uploadGpsTime >= App.getInstance().SAME_GPS_UPLOAD_TIME) {
-                                uploadGpsTime = System.currentTimeMillis();
-                                lastTime = lastAMapLocation.getTime();
-                                lastAMapLocation = location;
-                                listener.updateLocationChanged(location, mGpsCount, lastTime);
-                            }
-                        } else {
-                            //每次间隔5秒上传一次位置
-                            if (System.currentTimeMillis() - uploadGpsTime >= App.getInstance().MIN_GPS_UPLOAD_TIME) {
-                                uploadGpsTime = System.currentTimeMillis();
-                                lastTime = lastAMapLocation.getTime();
-                                lastAMapLocation = location;
-                                listener.updateLocationChanged(location, mGpsCount, lastTime);
-                            }
-                        }
-                    }
+                    listener.updateLocationChanged(location,mGpsCount);
                 }
             }
         }
 
         @Override
         public void onStatusChanged(String provider, int status, Bundle extras) {
-            Logger.i(TAG, "GPSLocationListener onStatusChanged" + status);
+            Logger.i(TAG, "GPSLocationListener onStatusChanged：" + status);
             switch (status) {
                 case LocationProvider.AVAILABLE:
                     break;

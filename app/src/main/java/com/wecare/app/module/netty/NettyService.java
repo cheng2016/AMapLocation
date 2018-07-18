@@ -35,6 +35,9 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
+import io.netty.handler.timeout.IdleState;
+import io.netty.handler.timeout.IdleStateEvent;
+import io.netty.handler.timeout.IdleStateHandler;
 
 /**
  * TCP 服务
@@ -130,6 +133,8 @@ public class NettyService extends Service {
                                             ChannelPipeline pipeline = ch.pipeline();
                                             ByteBuf delimiter = Unpooled.copiedBuffer(UP_MSG_END_FLAG.getBytes());
                                             pipeline.addLast(new DelimiterBasedFrameDecoder(Integer.MAX_VALUE, delimiter));
+                                            pipeline.addLast(new IdleStateHandler(0,
+                                                    0,2, TimeUnit.MINUTES));
                                             pipeline.addLast("decoder", new StringDecoder());
                                             pipeline.addLast("encoder", new StringEncoder());
                                             pipeline.addLast(new NettyClientHandler());
@@ -215,10 +220,10 @@ public class NettyService extends Service {
                     App.getInstance().HOST = results[2];
                     App.getInstance().MIN_GPS_UPLOAD_TIME = Integer.valueOf(results[3]) * 1000L;
                     App.getInstance().SAME_GPS_UPLOAD_TIME = Integer.valueOf(results[4]) * 1000L;
-//                    App.getInstance().HEART_BEAT_RATE = Integer.valueOf(results[5]) * 1000L;
+                    App.getInstance().HEART_BEAT_RATE = Integer.valueOf(results[5]) * 1000L;
 
                     Intent intent = new Intent(MainActivity.ACTION_RECEIVER_COMMAND);
-                    intent.putExtra("command_type", Constact.COMMAND_LOCATION);
+                    intent.putExtra("command_type", Constact.COMMAND_START_LOCATION);
                     sendBroadcast(intent);
                 }
             } else {
@@ -244,6 +249,30 @@ public class NettyService extends Service {
         @Override
         public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
             ctx.flush();
+        }
+
+        @Override
+        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            super.userEventTriggered(ctx, evt);
+            if (evt instanceof IdleStateEvent) {
+                IdleStateEvent event = (IdleStateEvent) evt;
+                if (event.state().equals(IdleState.READER_IDLE)) {
+                    Logger.i(TAG, "userEventTriggered READER_IDLE 读超时，长期没收到服务器推送数据！Channel is active：" + mChannelFuture.channel().isActive());
+                    //可以选择重新连接
+                    isConnect = false;
+                    ctx.close();
+                } else if (event.state().equals(IdleState.WRITER_IDLE)) {
+                    Logger.i(TAG, "userEventTriggered WRITER_IDLE 写超时，长期未向服务器发送数据！Channel is active：" + mChannelFuture.channel().isActive());
+                    //发送心跳包
+                    Logger.e(TAG, "sendMessage：" + HEART_BEAT_STRING);
+                    ctx.writeAndFlush(HEART_BEAT_STRING);
+                } else if (event.state().equals(IdleState.ALL_IDLE)) {
+                    Logger.i(TAG, "userEventTriggered ALL 没有接收或发送数据一段时间");
+                    //发送心跳包
+                    Logger.e(TAG, "sendMessage：" + HEART_BEAT_STRING);
+                    ctx.writeAndFlush(HEART_BEAT_STRING);
+                }
+            }
         }
 
         @Override

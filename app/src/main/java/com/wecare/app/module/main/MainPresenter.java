@@ -249,8 +249,54 @@ public class MainPresenter implements MainContract.Presenter, UpdateLocationList
         }
     }
 
+    private Location lastLocation = null;
+
+    private long lastTime = 0L;
+
+    private long uploadGpsTime = 0L;
+
+    private boolean isRequest = false;
+
+    /**
+     * 立即请求定位数据
+     * @param request
+     */
+    public void requestLocation(boolean request) {
+        isRequest = request;
+    }
+
     @Override
-    public void updateLocationChanged(Location location, int gpsCount, long lastPositionTime) {
-        view.onLocationChanged(location, gpsCount, lastPositionTime);
+    public void updateLocationChanged(Location location, int gpsCount) {
+        if (lastLocation == null) {
+            lastLocation = location;
+            uploadGpsTime = System.currentTimeMillis();
+            view.onLocationChanged(location, mGpsCount, System.currentTimeMillis());
+        } else {
+            if (location.getLatitude() == lastLocation.getLatitude() && location.getLongitude() == lastLocation.getLongitude()) {
+                //经纬度相同，则最上半小时上传一次经纬度
+                if (System.currentTimeMillis() - uploadGpsTime >= App.getInstance().SAME_GPS_UPLOAD_TIME) {
+                    uploadGpsTime = System.currentTimeMillis();
+                    lastTime = lastLocation.getTime();
+                    lastLocation = location;
+                    view.onLocationChanged(location, mGpsCount, lastTime);
+                }
+            } else {
+                //每次间隔5秒上传一次位置
+                if (System.currentTimeMillis() - uploadGpsTime >= App.getInstance().MIN_GPS_UPLOAD_TIME) {
+                    uploadGpsTime = System.currentTimeMillis();
+                    lastTime = lastLocation.getTime();
+                    lastLocation = location;
+                    view.onLocationChanged(location, mGpsCount, lastTime);
+                }
+            }
+        }
+
+        //是否立即获取定位数据
+        if(isRequest){
+            isRequest = false;
+            uploadGpsTime = System.currentTimeMillis();
+            lastTime = lastLocation.getTime();
+            view.onLocationChanged(location,gpsCount,lastTime);
+        }
     }
 }
