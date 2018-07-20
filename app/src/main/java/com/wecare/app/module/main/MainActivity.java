@@ -58,6 +58,8 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
 
     private LocationDaoUtils mLocationDaoUtils;
 
+    private boolean isStartLocation = false;
+
     @Override
     protected int getLayoutId() {
         return R.layout.activity_main;
@@ -148,11 +150,20 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
 
                         zxingTitleTv.setText("扫码绑定后视镜");
                         zxingCodeTv.setVisibility(View.INVISIBLE);
+                    }else{
+                        mMainPresenter.queryZxingQr();
+                        if(!isStartLocation){
+                            isStartLocation = false;
+                            mMainPresenter.requestLocation();
+                        }
                     }
                 }
                 break;
             case R.id.center_img:
-                mMainPresenter.requestLocation();
+                if(!isStartLocation){
+                    isStartLocation = false;
+                    mMainPresenter.requestLocation();
+                }
                 break;
             default:
                 break;
@@ -168,9 +179,10 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
 
     @Override
     public void onLocationChanged(Location location, int gpsCount, long lastPositionTime) {
+        isStartLocation = true;
         int positionType;
         if (location instanceof AMapLocation) {
-            Logger.i(TAG, "onLocationChanged success，location ：经    度：" + location.getLongitude() + " 纬    度：" + location.getLatitude());
+            Logger.i(TAG, "onLocationChanged success，location ：经    度：" + location.getLongitude() + " 纬    度：" + location.getLatitude() +" 定位类型：" +((AMapLocation) location).getLocationType());
             positionType = 4;
             T.showShort(this, "高德定位成功：" + ((AMapLocation) location).getAddress());
         } else {

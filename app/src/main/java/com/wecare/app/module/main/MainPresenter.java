@@ -11,6 +11,7 @@ import android.location.LocationManager;
 import android.support.v4.app.ActivityCompat;
 import android.text.TextUtils;
 
+import com.amap.api.location.AMapLocation;
 import com.google.gson.Gson;
 import com.wecare.app.App;
 import com.wecare.app.data.entity.GetImageReq;
@@ -23,6 +24,7 @@ import com.wecare.app.module.location.AMapLocationStrategy;
 import com.wecare.app.module.location.GpsLocationStrategy;
 import com.wecare.app.module.location.LocationController;
 import com.wecare.app.module.location.UpdateLocationListener;
+import com.wecare.app.util.Constact;
 import com.wecare.app.util.Logger;
 import com.wecare.app.util.T;
 
@@ -103,7 +105,7 @@ public class MainPresenter implements MainContract.Presenter, UpdateLocationList
 
     @Override
     public void queryBusiness(String type) {
-        final QueryBusinessReq req = new QueryBusinessReq(App.getInstance().IMEI, type);
+        final QueryBusinessReq req = new QueryBusinessReq(App.getInstance().IMEI, type, Constact.APP_KEY);
         mHttpApi.queryBusiness(new Gson().toJson(req))
                 .subscribeOn(Schedulers.newThread())
                 .observeOn(AndroidSchedulers.mainThread())
@@ -133,7 +135,7 @@ public class MainPresenter implements MainContract.Presenter, UpdateLocationList
 
     @Override
     public void queryZxingQr() {
-        GetImageReq req = new GetImageReq(App.getInstance().IMEI);
+        GetImageReq req = new GetImageReq(App.getInstance().IMEI, Constact.APP_KEY);
         mHttpApi.getImageUrl(new Gson().toJson(req))
                 .subscribeOn(Schedulers.newThread())
                 .observeOn(AndroidSchedulers.mainThread())
@@ -283,6 +285,12 @@ public class MainPresenter implements MainContract.Presenter, UpdateLocationList
             } else {
                 //每次间隔5秒上传一次位置
                 if (System.currentTimeMillis() - uploadGpsTime >= App.getInstance().MIN_GPS_UPLOAD_TIME) {
+                    if(location instanceof AMapLocation){
+                        if(((AMapLocation) location).getLocationType() == AMapLocation.LOCATION_TYPE_FIX_CACHE){
+                            Logger.i(TAG,"暂不使用高德缓存定位！位置为：" + ((AMapLocation) location).getAddress());
+                            return;
+                        }
+                    }
                     uploadGpsTime = System.currentTimeMillis();
                     lastTime = lastLocation.getTime();
                     lastLocation = location;

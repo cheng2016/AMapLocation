@@ -134,7 +134,7 @@ public class NettyService extends Service {
                                             ByteBuf delimiter = Unpooled.copiedBuffer(UP_MSG_END_FLAG.getBytes());
                                             pipeline.addLast(new DelimiterBasedFrameDecoder(Integer.MAX_VALUE, delimiter));
                                             pipeline.addLast(new IdleStateHandler(0,
-                                                    0,2, TimeUnit.MINUTES));
+                                                    0, 2, TimeUnit.MINUTES));
                                             pipeline.addLast("decoder", new StringDecoder());
                                             pipeline.addLast("encoder", new StringEncoder());
                                             pipeline.addLast(new NettyClientHandler());
@@ -184,7 +184,7 @@ public class NettyService extends Service {
 
     class NettyClientHandler extends ChannelInboundHandlerAdapter {
         @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        public void channelActive(ChannelHandlerContext ctx) {
             ctx.writeAndFlush(INIT_BEAT_STRING);
             ctx.writeAndFlush(HEART_BEAT_STRING);
             ctx.writeAndFlush(GET_DATA_STRING);
@@ -192,7 +192,7 @@ public class NettyService extends Service {
         }
 
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
             String message = (String) msg;
             //收到服务器过来的消息，就通过Broadcast发送出去
             if (INIT_BEAT_STRING_RESPONSE.startsWith(message)) {
@@ -247,8 +247,14 @@ public class NettyService extends Service {
         }
 
         @Override
-        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        public void channelReadComplete(ChannelHandlerContext ctx) {
             ctx.flush();
+        }
+
+        @Override
+        public void channelInactive(ChannelHandlerContext ctx) {
+            Logger.i(TAG, "channelInactive：下线了");
+            initNettySocket();
         }
 
         @Override
@@ -278,7 +284,6 @@ public class NettyService extends Service {
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             Logger.i(TAG, "exceptionCaught：" + cause);
-            cause.printStackTrace();
             ctx.close();
             isConnect = false;
         }
@@ -288,11 +293,11 @@ public class NettyService extends Service {
         Logger.e(TAG, "sendMessage：" + msg);
         if (mChannelFuture != null && mChannelFuture.channel() != null && isConnect) {
             //不是心跳则直接发送该消息
-            if(!HEART_BEAT_STRING.equals(msg)){
+            if (!HEART_BEAT_STRING.equals(msg)) {
                 mChannelFuture.channel().writeAndFlush(msg);
             }
             //心跳补偿机制，每次发送消息时判断是否心跳包时间间隔到达指定时间
-            if(System.currentTimeMillis() - sendTime >= App.getInstance().HEART_BEAT_RATE){
+            if (System.currentTimeMillis() - sendTime >= App.getInstance().HEART_BEAT_RATE) {
                 //移除之前的心跳定时任务，马上发送心跳
                 handler.removeCallbacks(heartRunnable);
                 mChannelFuture.channel().writeAndFlush(HEART_BEAT_STRING);
