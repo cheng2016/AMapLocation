@@ -18,6 +18,8 @@ GPS原始定位 VS 高德地位的一个实例，根据GPS卫星数量自动切�
 - 使用 bindService 模式启动 Service
 - 使用 IntentService 通过 TCP 协议上传文件
 - 使用 broadcast 进行 activity 与 service 的数据交互 
+- 集成AndServer服务器，提供wifi直连功能
+- 增加wifi服务监听广播，根据是否开启wifi热点自动启动Andserver服务器
 
 
 
