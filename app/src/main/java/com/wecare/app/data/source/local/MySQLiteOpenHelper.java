@@ -4,9 +4,9 @@ import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
 
-import com.github.yuweiguocn.library.greendao.MigrationHelper;
 import com.wecare.app.data.source.local.greendao.DaoMaster;
 import com.wecare.app.data.source.local.greendao.LocationDataDao;
+import com.wecare.app.data.source.local.greendao.VideoDataDao;
 
 import org.greenrobot.greendao.database.Database;
 
@@ -31,7 +31,7 @@ public class MySQLiteOpenHelper extends DaoMaster.OpenHelper {
                 public void onDropAllTables(Database db, boolean ifExists) {
                     DaoMaster.dropAllTables(db, ifExists);
                 }
-            },LocationDataDao.class);
+            },LocationDataDao.class,VideoDataDao.class);
         }
     }
 }

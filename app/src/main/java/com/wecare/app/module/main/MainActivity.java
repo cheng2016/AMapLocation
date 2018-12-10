@@ -5,42 +5,49 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Bitmap;
 import android.location.Location;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
+import android.os.Handler;
+import android.provider.Settings;
 import android.support.v7.widget.AppCompatImageView;
 import android.text.TextUtils;
 import android.view.KeyEvent;
 import android.view.View;
-import android.widget.Button;
 import android.widget.TextView;
 
 import com.amap.api.location.AMapLocation;
-import com.bumptech.glide.Glide;
 import com.squareup.picasso.Picasso;
 import com.wecare.app.App;
 import com.wecare.app.R;
 import com.wecare.app.data.entity.LocationData;
 import com.wecare.app.data.entity.QueryBusinessResp;
 import com.wecare.app.data.source.local.LocationDaoUtils;
-import com.wecare.app.module.netty.NettyService;
+import com.wecare.app.module.netty.BootService;
 import com.wecare.app.module.service.UploadService;
 import com.wecare.app.module.setting.SettingActivity;
+import com.wecare.app.server.CoreService;
 import com.wecare.app.util.AMapUtils;
 import com.wecare.app.util.Constact;
+import com.wecare.app.util.DimenUtils;
 import com.wecare.app.util.Logger;
 import com.wecare.app.util.NetUtils;
 import com.wecare.app.util.PreferenceConstants;
 import com.wecare.app.util.PreferenceUtils;
 import com.wecare.app.util.StringTcpUtils;
-import com.wecare.app.util.T;
+import com.wecare.app.util.StringUtils;
+import com.wecare.app.util.ToastUtils;
+import com.wecare.app.util.WifiUtils;
+
+import java.util.regex.Matcher;
+
+import io.netty.util.internal.StringUtil;
 
 public class MainActivity extends CheckPermissionsActivity implements MainContract.View, View.OnClickListener {
-    public static final long ONE_DAY = 24 * 60 * 60 * 1000L;
+    public static final long ONE_DAY = 9 * 60 * 60 * 1000L;
 
-    private Button btLocation, thridLocation;
-
-    private TextView tvResult, thridResult, statesTv, zxingTitleTv, zxingCodeTv;
+    private TextView zxingTitleTv, zxingCodeTv;
 
     public MainPresenter mMainPresenter;
 
@@ -53,8 +60,6 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
     private String headUrl;
 
     private String nickName;
-
-//    private Handler handler = new Handler();
 
     private LocationDaoUtils mLocationDaoUtils;
 
@@ -71,14 +76,8 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
         zxingCodeTv = findViewById(R.id.zxing_code_tv);
 
         centerImage = findViewById(R.id.center_img);
-        centerImage.setOnClickListener(this);
-        tvResult = findViewById(R.id.result_tv);
-        thridResult = findViewById(R.id.thrid_result_tv);
-        statesTv = findViewById(R.id.states_tv);
-        btLocation = findViewById(R.id.location_btn);
-        btLocation.setOnClickListener(this);
-        thridLocation = findViewById(R.id.thrid_location_btn);
-        thridLocation.setOnClickListener(this);
+        findViewById(R.id.center_img).setOnClickListener(this);
+
         findViewById(R.id.connect_btn).setOnClickListener(this);
         findViewById(R.id.send_btn).setOnClickListener(this);
 
@@ -93,26 +92,25 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
 
     @Override
     protected void initData(Bundle savedInstanceState) {
-        new MainPresenter(this, MainActivity.this);
-//        mMainPresenter.subscribe();
-        registerActionReceiver();
-        headUrl = PreferenceUtils.getPrefString(this, PreferenceConstants.HEAD_URL, "");
-        nickName = PreferenceUtils.getPrefString(this, PreferenceConstants.NICK_NAME, "");
-        if (!TextUtils.isEmpty(headUrl) && !TextUtils.isEmpty(nickName)) {
-            showZxing = false;
-            Picasso.with(MainActivity.this).load(headUrl).transform(new PicassoRoundTransform()).into(centerImage);
-            zxingTitleTv.setText(nickName);
-            zxingCodeTv.setText("点击可切换 头像/二维码");
-            zxingCodeTv.setVisibility(View.VISIBLE);
+        //查看后台服务是否启动
+        boolean isBootRunning = PreferenceUtils.getPrefBoolean(this, PreferenceConstants.SERVICE_BOOT_STATE, true);
+        if (isBootRunning) {
+            Intent i = new Intent().setClass(this, BootService.class);
+            stopService(i);
         }
-        mMainPresenter.queryZxingQr();
-
-//        mMainPresenter.requestGpsCount();
-
-//        mMainPresenter.initLocation();
-//        mMainPresenter.startLocation();
-
-//        mMainPresenter.requestLocation();
+        registerActionReceiver();
+        new MainPresenter(this, MainActivity.this);
+        mMainPresenter.queryBusiness(Constact.COMMAND_GET_DATA + "");
+        new Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (TextUtils.isEmpty(qrUrl)) {
+                    mMainPresenter.queryZxingQr();
+                }
+            }
+        }, 500);
+        //获取传感器
+//        mMainPresenter.getSensorData(this);
     }
 
     @Override
@@ -120,49 +118,42 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
         super.onDestroy();
         unregisterActionReceiver();
         mMainPresenter.unsubscribe();
-//        mMainPresenter.stopGpsLocation();
     }
 
     @Override
     public void onClick(View v) {
+        Intent intent = new Intent();
         switch (v.getId()) {
             case R.id.right_layout:
-                Intent intent = new Intent();
                 intent.setClass(MainActivity.this, SettingActivity.class);
                 startActivity(intent);
                 break;
             case R.id.zxing_bottom_layout:
                 if (showZxing && !TextUtils.isEmpty(nickName) && !TextUtils.isEmpty(headUrl)) {
-                    showZxing = false;
-                    Picasso.with(MainActivity.this).load(headUrl).transform(new PicassoRoundTransform()).into(centerImage);
-
-//                    Glide.with(this).load(headUrl).centerCrop().transform(new GlideRoundTransform(this)).into(centerImage);
-
-                    zxingTitleTv.setText(nickName);
-                    zxingCodeTv.setText("点击可切换 头像/二维码");
-                    zxingCodeTv.setVisibility(View.VISIBLE);
+                    showWxing();
                 } else {
                     if (!TextUtils.isEmpty(qrUrl)) {
-                        showZxing = true;
-                        Picasso.with(MainActivity.this).load(qrUrl).transform(new PicassoRoundTransform()).into(centerImage);
-
-//                        Glide.with(this).load(qrUrl).centerCrop().transform(new GlideRoundTransform(this)).into(centerImage);
-
-                        zxingTitleTv.setText("扫码绑定后视镜");
-                        zxingCodeTv.setVisibility(View.INVISIBLE);
-                    }else{
+                        showZxing();
+                    } else {
                         mMainPresenter.queryZxingQr();
-                        if(!isStartLocation){
-                            isStartLocation = false;
-                            mMainPresenter.requestLocation();
-                        }
                     }
+                }
+                if (!isStartLocation) {
+                    mMainPresenter.requestLocation();
+                }
+
+                long requestQR = PreferenceUtils.getPrefLong(this, PreferenceConstants.QUERY_QR_TIME, 0);
+                //补偿机制，解决长时间计时不准确的问题
+                if (System.currentTimeMillis() - requestQR >= ONE_DAY || TextUtils.isEmpty(qrUrl)) {
+                    Logger.i(TAG,"--------------超过指定时间刷新二维码-------------------");
+                    mMainPresenter.queryZxingQr();
                 }
                 break;
             case R.id.center_img:
-                if(!isStartLocation){
-                    isStartLocation = false;
-                    mMainPresenter.requestLocation();
+                if (WifiUtils.isWifiApOpen(MainActivity.this)) {
+                    Intent i = new Intent();
+                    i.setClass(MainActivity.this, CoreService.class);
+                    startService(i);
                 }
                 break;
             default:
@@ -176,28 +167,23 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
         mMainPresenter = (MainPresenter) presenter;
     }
 
-
     @Override
     public void onLocationChanged(Location location, int gpsCount, long lastPositionTime) {
         isStartLocation = true;
         int positionType;
         if (location instanceof AMapLocation) {
-            Logger.i(TAG, "onLocationChanged success，location ：经    度：" + location.getLongitude() + " 纬    度：" + location.getLatitude() +" 定位类型：" +((AMapLocation) location).getLocationType());
+            Logger.i(TAG, "高德定位成功：" + ((AMapLocation) location).getAddress() + " 定位类型：" + ((AMapLocation) location).getLocationType());
             positionType = 4;
-            T.showShort(this, "高德定位成功：" + ((AMapLocation) location).getAddress());
+            ToastUtils.showShort(this, "高德定位成功：" + ((AMapLocation) location).getAddress());
         } else {
-            T.showShort(this, "GPS定位成功！");
+            Logger.i(TAG, "GPS定位成功：经    度：" + location.getLongitude() + " 纬    度：" + location.getLatitude());
             positionType = 1;
+            ToastUtils.showShort(this, "GPS定位成功！");
         }
         String content = StringTcpUtils.buildGpsContent(location.getLongitude(), location.getLatitude(), location.getAltitude(),
                 location.getSpeed(), location.getBearing(), gpsCount, location.getAccuracy(), positionType, location.getTime(), lastPositionTime, "");
-        content = StringTcpUtils.buildGpsString(App.getInstance().IMEI, content);
+        content = StringTcpUtils.buildGpsString(PreferenceUtils.getPrefString(this, PreferenceConstants.IMEI, ""), content);
         if (mSocketService != null && NetUtils.isConnected(this)) {
-/*            if (mSocketService.isConnect()) {
-                mSocketService.sendMessage(content);
-            } else {
-                mSocketService.initSocketClient();
-            }*/
             mSocketService.sendMessage(content);
         } else {
             if (mLocationDaoUtils == null) {
@@ -207,44 +193,31 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
             data.setContent(content);
             mLocationDaoUtils.insert(data);
         }
-        zxingTitleTv.setText("定位成功，经    度：" + location.getLongitude() + " 纬    度：" + location.getLatitude());
-    }
-
-    @Override
-    public void showStates(String message) {
-        statesTv.setText(message);
     }
 
     @Override
     public void queryZxingQrSuccess(String url) {
+        PreferenceUtils.setPrefLong(this, PreferenceConstants.QUERY_QR_TIME, System.currentTimeMillis());
         qrUrl = url;
-//        mMainPresenter.requestGpsCount();
         if (!TextUtils.isEmpty(headUrl) && !TextUtils.isEmpty(nickName)) {
             return;
         }
-        showZxing = true;
-//        Picasso.with(this).load(url).transform(new PicassoRoundTransform()).into(centerImage);
-
-        Glide.with(this).load(url).centerCrop().transform(new GlideRoundTransform(this)).into(centerImage);
-
-        zxingTitleTv.setText("扫码绑定后视镜");
-        zxingCodeTv.setText("微信码：FSDFWEQRRQWEWQ");
-        zxingCodeTv.setVisibility(View.INVISIBLE);
+        showZxing();
+        //下载图片到本地，并写入系统设置
+        mMainPresenter.loadImageToSettings(this, url);
     }
 
     @Override
     public void queryBusinessSucess(QueryBusinessResp resp) {
         if (resp != null && resp.getData() != null && !TextUtils.isEmpty(resp.getData().getHead_image_url())) {
-            showZxing = false;
             headUrl = resp.getData().getHead_image_url();
             nickName = resp.getData().getNick_name();
-            PreferenceUtils.setPrefString(this, PreferenceConstants.HEAD_URL, headUrl);
-            PreferenceUtils.setPrefString(this, PreferenceConstants.NICK_NAME, nickName);
 
-            Picasso.with(MainActivity.this).load(headUrl).transform(new PicassoRoundTransform()).into(centerImage);
-            zxingTitleTv.setText(nickName);
-            zxingCodeTv.setText("点击可切换 头像/二维码");
-            zxingCodeTv.setVisibility(View.VISIBLE);
+            showWxing();
+
+            //下载图片到本地，并写入系统设置
+            mMainPresenter.loadImageToSettings(this, headUrl);
+
             QueryBusinessResp.DataBean bean = resp.getData();
             if (!TextUtils.isEmpty(bean.getLat())
                     && !TextUtils.isEmpty(bean.getLng())) {
@@ -253,15 +226,42 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
                         Integer.valueOf(TextUtils.isEmpty(bean.getStyle()) ? "0" : bean.getStyle()));
             }
         } else {
-            mMainPresenter.queryZxingQr();
             headUrl = "";
             nickName = "";
-            PreferenceUtils.setPrefString(this, PreferenceConstants.HEAD_URL, "");
-            PreferenceUtils.setPrefString(this, PreferenceConstants.NICK_NAME, "");
+            mMainPresenter.queryZxingQr();
         }
     }
 
+    /**
+     * 显示二维码信息
+     */
+    private void showZxing() {
+        showZxing = true;
+        Picasso.with(this).load(qrUrl).config(Bitmap.Config.RGB_565).transform(new PicassoRoundTransform()).into(centerImage);
+        zxingTitleTv.setText("扫码绑定后视镜");
+        zxingCodeTv.setText("点击可切换 头像/二维码");
+        zxingCodeTv.setVisibility(View.INVISIBLE);
+    }
+
+    /**
+     * 显示微信信息
+     */
+    private void showWxing() {
+        showZxing = false;
+        int size = DimenUtils.dp2px(this, 160);
+        Picasso.with(this).load(headUrl).config(Bitmap.Config.RGB_565).resize(size, size).centerCrop().transform(new PicassoRoundTransform()).into(centerImage);
+        zxingTitleTv.setText(nickName);
+        zxingCodeTv.setText("点击可切换 头像/二维码");
+        zxingCodeTv.setVisibility(View.VISIBLE);
+    }
+
     public static final String ACTION_RE_MICRO_OR_PICTURE = "com.discovery.action.RE_MICRO_OR_PICTURE";
+
+    public static final String ACTION_GSENSOR_ALERT = "com.discovery.action.GSENSOR_ALERT";
+
+    public static final String ACTION_GSENSOR_ALERT_RUN = "com.discovery.action.GSENSOR_ALERT_RUN";
+
+    //    public static final String KEY_USERID = "key_userid";
     public static final String KEY_CREATE_TIME = "key_create_time";
     public static final String KEY_CAMERAID = "key_camerid";
     public static final String KEY_TIME = "key_time";
@@ -272,7 +272,7 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
     public static final String KEY_PATH = "key_path";
     public static final String KEY_ERROR = "key_error";
 
-    public static final String MY_KEY = "my_demo";
+    //    public static final String MY_KEY = "my_demo";
     private ActionReceiver mReceiver;
 
     private CommandReceiver mCommandReceiver;
@@ -287,6 +287,8 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
         mReceiver = new ActionReceiver();
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(ACTION_RE_MICRO_OR_PICTURE);
+        intentFilter.addAction(ACTION_GSENSOR_ALERT);
+        intentFilter.addAction(ACTION_GSENSOR_ALERT_RUN);
         registerReceiver(mReceiver, intentFilter);
 
         mCommandReceiver = new CommandReceiver();
@@ -296,8 +298,9 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
 
         mNetworkStateReceiver = new NetworkStateReceiver();
         IntentFilter netIntentFilter = new IntentFilter();
-        netIntentFilter.addAction(NETWORK_RECEIVER);
-        registerReceiver(mNetworkStateReceiver,netIntentFilter);
+        netIntentFilter.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
+        netIntentFilter.addAction(Intent.ACTION_AIRPLANE_MODE_CHANGED);
+        registerReceiver(mNetworkStateReceiver, netIntentFilter);
     }
 
     /**
@@ -326,6 +329,7 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
                         long time = intent.getLongExtra(KEY_TIME, 0);
                         int width = intent.getIntExtra(KEY_WIDTH, 0);
                         int height = intent.getIntExtra(KEY_HEIGHT, 0);
+
                         String key = intent.getStringExtra(KEY_KEY);
                         String type = intent.getStringExtra(KEY_TYPE);
                         String path = intent.getStringExtra(KEY_PATH);
@@ -339,27 +343,50 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
                         Logger.d(TAG, "    ------------------------------ type : " + type);
                         Logger.d(TAG, "    ------------------------------ path : " + path);
                         Logger.d(TAG, "    ------------------------------ error : " + error);
-                        if (key != null && key.equals(MY_KEY)) {
-                            Logger.i(TAG, "回调成功" + path);
-                            statesTv.setText("回调成功" + path);
-                            if (!TextUtils.isEmpty(path)) {
-                                Intent i = new Intent().setClass(MainActivity.this, UploadService.class);
-                                i.putExtra("path", path);
-                                if (path.endsWith("mp4")) {
-                                    i.putExtra("type", Constact.FILE_TYPE_VEDIO);
-                                } else if (path.endsWith("png") || path.endsWith("jpg")) {
+                        if (!TextUtils.isEmpty(path)) {
+                            Intent i = new Intent().setClass(MainActivity.this, UploadService.class);
+                            i.putExtra("path", path);
+                            i.putExtra("timeTemp", createtime);
+                            if ("GSENSOR".equals(key)) {
+                                if ("pic".equals(type)) {
                                     i.putExtra("type", Constact.FILE_TYPE_IMAGE);
+                                    //系统发出的拍照不上传
+                                    return;
+                                } else if ("vid".equals(type)) {
+                                    i.putExtra("type", Constact.FILE_TYPE_COLLISION);
                                 }
-                                startService(i);
+                                i.putExtra("userId", "");
+                            } else {
+                                i.putExtra("userId", key);
+                                if ("pic".equals(type)) {
+                                    i.putExtra("type", Constact.FILE_TYPE_IMAGE);
+                                } else if ("vid".equals(type)) {
+                                    i.putExtra("type", Constact.FILE_TYPE_VEDIO);
+                                }
+                                if (isCollision && createtime == collisionTime) {
+                                    isCollision = false;
+                                    i.putExtra("type", Constact.FILE_TYPE_COLLISION);
+                                }
                             }
+                            startService(i);
                         }
                     }
                 }
-            } else {
-                Logger.d(TAG, "ActionReceiver ------- intent == null");
+                if (action.equals(ACTION_GSENSOR_ALERT) || action.equals(ACTION_GSENSOR_ALERT_RUN)) {
+                    Logger.i(TAG, "检车到停车碰撞或行车碰撞，启动相机录像");
+                    isCollision = true;
+                    collisionTime = System.currentTimeMillis();
+                    mMainPresenter.takeMicroRecord(MainActivity.this, collisionTime, Constact.CAMERA_FRONT, "");
+                }
             }
         }
     }
+
+
+    //是否碰撞
+    boolean isCollision = false;
+    //碰撞时间
+    long collisionTime;
 
     public static final String ACTION_RECEIVER_COMMAND = "com.discovery.action.COMMAND";
 
@@ -368,19 +395,19 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
         public void onReceive(Context context, Intent intent) {
             if (intent != null) {
                 String action = intent.getAction();
-                Logger.d(TAG, "CommandReceiver ------- action : " + action);
                 int type = intent.getIntExtra("command_type", Constact.COMMAND_TACK_IMAGE);
                 int cameraid = intent.getIntExtra("cameraid", Constact.CAMERA_FRONT);
+                String key = intent.getStringExtra("userId");
+                Logger.d(TAG, "CommandReceiver ------- action : " + action + " type：" + type);
                 switch (type) {
                     case Constact.COMMAND_TACK_IMAGE:
-                        mMainPresenter.takePicture(MainActivity.this, System.currentTimeMillis(), cameraid, MY_KEY);
+                        mMainPresenter.takePicture(MainActivity.this, System.currentTimeMillis(), cameraid, key);
                         break;
                     case Constact.COMMAND_TACK_VIDEO:
-                        mMainPresenter.takeMicroRecord(MainActivity.this, System.currentTimeMillis(), cameraid, MY_KEY);
+                        mMainPresenter.takeMicroRecord(MainActivity.this, System.currentTimeMillis(), cameraid, key);
                         break;
                     case Constact.COMMAND_SUCCESS:
-                        T.showShort(MainActivity.this, "上传成功");
-                        statesTv.setText("上传成功");
+                        ToastUtils.showShort(MainActivity.this, "上传成功");
                         break;
                     case Constact.COMMAND_GO_NAVI:
                         mMainPresenter.queryBusiness(Constact.COMMAND_GO_NAVI + "");
@@ -396,8 +423,7 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
                         break;
                     case Constact.COMMAND_START_LOCATION:
                         mMainPresenter.requestLocation();
-                        Logger.i(TAG,"TCP服务启动成功，启动定位模式！");
-                        T.showShort(MainActivity.this,"Netty启动成功，启动定位模式！");
+                        Logger.i(TAG, "TCP服务启动成功，启动定位模式！");
                         break;
                     default:
                         break;
@@ -406,22 +432,27 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
         }
     }
 
-    public static final String NETWORK_RECEIVER = "android.net.conn.CONNECTIVITY_CHANGE";
-
     /**
      * 监听系统网络状态广播，7.0 后只支持动态注册
      */
     class NetworkStateReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
-            if (intent.getAction().equals(ConnectivityManager.CONNECTIVITY_ACTION)) {
-                if(NetUtils.isConnected(MainActivity.this)){
-                    if(mSocketService != null)
-                        mSocketService.sendMessage(NettyService.HEART_BEAT_STRING);
+            String action = intent.getAction();
+            if (action.equals(ConnectivityManager.CONNECTIVITY_ACTION)) {
+                if (NetUtils.isConnected(MainActivity.this)) {
+                    if (mSocketService != null)
+                        mSocketService.sendMessage(mSocketService.HEART_BEAT_STRING);
                 }
             }
-            Logger.i(TAG,"NetworkStateReceiver is work！");
+            if (action.equals(Intent.ACTION_AIRPLANE_MODE_CHANGED)) {// 飞行模式状态改变
+                // To Do
+                boolean isEnable = Settings.Global.getInt(context.getContentResolver(), Settings.Global.AIRPLANE_MODE_ON, -1) == 1;
+                Logger.d(TAG, "AirplaneModeReceiver - isEnable : " + isEnable);
+            }
+            Logger.i(TAG, "NetworkStateReceiver is work， action：" + action);
         }
+
     }
 
     @Override

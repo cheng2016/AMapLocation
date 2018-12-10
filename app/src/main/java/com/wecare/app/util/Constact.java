@@ -37,6 +37,8 @@ public interface Constact {
 
     int FILE_TYPE_VEDIO = 3;
 
+    int FILE_TYPE_COLLISION = 4;
+
     int FILE_TYPE_IMAGE_FORMAT = 1;
 
     int FILE_TYPE_VOICE_FORMAT = 2;
@@ -72,4 +74,6 @@ public interface Constact {
     int CAMERA_FRONT = 0;
 
     int CAMERA_REAR = 1;
+
+    String MY_KEY = "my_demo";
 }

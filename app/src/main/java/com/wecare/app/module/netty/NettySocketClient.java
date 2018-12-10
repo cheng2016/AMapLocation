@@ -1,5 +1,7 @@
 package com.wecare.app.module.netty;
 
+import java.util.concurrent.TimeUnit;
+
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -14,6 +16,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
+import io.netty.handler.timeout.IdleStateHandler;
 
 /**
  * TCP 客户端
@@ -25,11 +28,13 @@ public class NettySocketClient {
 
     public static final String UP_MSG_END_FLAG = new String(new byte[] { 0x01,0x01,0x01 });
 
-//    private static final String IP = "127.0.0.1";
+    private static final String IP = "127.0.0.1";
 
-    private static final String IP = "sit.wecarelove.com";
+//    private static final String IP = "sit.wecarelove.com";
 
-    private static final int PORT = 2993;
+//    private static final int PORT = 2993;
+
+    private static final int PORT = 8080;
 
     private static final EventLoopGroup group = new NioEventLoopGroup();
 
@@ -47,6 +52,8 @@ public class NettySocketClient {
 
                 ByteBuf delimiter = Unpooled.copiedBuffer(UP_MSG_END_FLAG.getBytes());
                 pipeline.addLast(new DelimiterBasedFrameDecoder(Integer.MAX_VALUE, delimiter));
+                pipeline.addLast("idleStateHandler",new IdleStateHandler(30 * 60,
+                        30 * 60,30 * 60, TimeUnit.SECONDS));
                 pipeline.addLast("decoder", new StringDecoder());
                 pipeline.addLast("encoder", new StringEncoder());
 

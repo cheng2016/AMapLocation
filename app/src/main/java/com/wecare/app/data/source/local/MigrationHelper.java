@@ -1,5 +1,10 @@
 package com.wecare.app.data.source.local;
 
+/**
+ * Created by Administrator Chengzj
+ *
+ * @date 2018/10/22 11:04
+ */
 import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
@@ -31,7 +36,7 @@ public final class MigrationHelper {
     private static final String SQLITE_MASTER = "sqlite_master";
     private static final String SQLITE_TEMP_MASTER = "sqlite_temp_master";
 
-    private static WeakReference<ReCreateAllTableListener> weakListener;
+    private static WeakReference<MigrationHelper.ReCreateAllTableListener> weakListener;
 
     public interface ReCreateAllTableListener{
         void onCreateAllTables(Database db, boolean ifNotExists);
@@ -44,12 +49,12 @@ public final class MigrationHelper {
         migrate(database, daoClasses);
     }
 
-    public static void migrate(SQLiteDatabase db, ReCreateAllTableListener listener, Class<? extends AbstractDao<?, ?>>... daoClasses) {
+    public static void migrate(SQLiteDatabase db, MigrationHelper.ReCreateAllTableListener listener, Class<? extends AbstractDao<?, ?>>... daoClasses) {
         weakListener = new WeakReference<>(listener);
         migrate(db, daoClasses);
     }
 
-    public static void migrate(Database database, ReCreateAllTableListener listener, Class<? extends AbstractDao<?, ?>>... daoClasses) {
+    public static void migrate(Database database, MigrationHelper.ReCreateAllTableListener listener, Class<? extends AbstractDao<?, ?>>... daoClasses) {
         weakListener = new WeakReference<>(listener);
         migrate(database, daoClasses);
     }
@@ -59,7 +64,7 @@ public final class MigrationHelper {
         generateTempTables(database, daoClasses);
         printLog("【Generate temp table】complete");
 
-        ReCreateAllTableListener listener = null;
+        MigrationHelper.ReCreateAllTableListener listener = null;
         if (weakListener != null) {
             listener = weakListener.get();
         }
@@ -245,3 +250,4 @@ public final class MigrationHelper {
     }
 
 }
+

@@ -66,7 +66,7 @@ public class FileTransferClient extends Socket {
 //                dos = new DataOutputStream(client.getOutputStream());
                 fos = client.getOutputStream();
 
-                String content = StringTcpUtils.buildUploadString(type, "358732036574479", file.length());
+                String content = StringTcpUtils.buildUploadString(type, "358732036574453", file.length());
                 //总包长度 = 文本length +　文件length　＋ 1
                 long allByteLength = content.length();
                 allByteLength += file.length() + 1;

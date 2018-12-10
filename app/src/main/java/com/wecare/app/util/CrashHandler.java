@@ -178,24 +178,20 @@ public class CrashHandler implements Thread.UncaughtExceptionHandler {
         sb.append(result);
         try {
             String time = formatter.format(new Date());
-            String fileName = nameString + "-" + time + ".log";
-            if (Environment.getExternalStorageState().equals(
-                    Environment.MEDIA_MOUNTED)) {
-
-                if (isSDCardOK()) {
-                    filePath = Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator + "wecare" + File.separator + "crash" + File.separator;
-                }else{
-                    filePath = App.getInstance().getExternalCacheDir().getAbsolutePath() + File.separator + "wecare" + File.separator + "crash" + File.separator;
-                }
-                File dir = new File(filePath);
-                if (!dir.exists()) {
-                    dir.mkdirs();
-                }
-                FileOutputStream fos = new FileOutputStream(filePath + fileName);
-                fos.write(sb.toString().getBytes());
-                fos.flush();
-                fos.close();
+            String fileName = nameString + "-" + time + ".txt";
+            if (isSDCardOK()) {
+                filePath = Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator + "wecare" + File.separator + "crash" + File.separator;
+            } else {
+                filePath = App.getInstance().getExternalCacheDir().getAbsolutePath() + File.separator + "wecare" + File.separator + "crash" + File.separator;
             }
+            File dir = new File(filePath);
+            if (!dir.exists()) {
+                dir.mkdirs();
+            }
+            FileOutputStream fos = new FileOutputStream(filePath + fileName);
+            fos.write(sb.toString().getBytes());
+            fos.flush();
+            fos.close();
             return fileName;
         } catch (Exception e) {
             Log.e(TAG, "an error occured while writing file...", e);

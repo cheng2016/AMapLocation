@@ -10,13 +10,27 @@ import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Environment;
 import android.os.StatFs;
+import android.os.storage.StorageManager;
 import android.provider.Settings;
 import android.support.v4.app.ActivityCompat;
 import android.telephony.TelephonyManager;
+import android.text.TextUtils;
+import android.text.format.Formatter;
 import android.util.Log;
 
+import com.google.gson.Gson;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.lang.reflect.Method;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
 /**
  * Created by chengzj on 2018/6/21.
@@ -26,10 +40,11 @@ public class DeviceUtils {
 
     /**
      * 获取当前App版本名称
+     *
      * @param context
      * @return
      */
-    public String getAppVersionName(Context context) {
+    public static String getAppVersionName(Context context) {
         String versionName = "";
         int versionCode = 0;
         try {
@@ -51,10 +66,11 @@ public class DeviceUtils {
 
     /**
      * 获取当前App版本code
+     *
      * @param context
      * @return
      */
-    public int getAppVersionCode(Context context) {
+    public static int getAppVersionCode(Context context) {
         int versionCode = 0;
         try {
             // ---get the package info---
@@ -69,9 +85,10 @@ public class DeviceUtils {
 
 
     /**
-    * 外部存储(SDCard)是否可用
-    * @return
-    */
+     * 外部存储(SDCard)是否可用
+     *
+     * @return
+     */
     public static boolean externalMemoryAvailable() {
         return android.os.Environment.getExternalStorageState().equals(
                 android.os.Environment.MEDIA_MOUNTED);
@@ -159,42 +176,89 @@ public class DeviceUtils {
     }
 
     /**
-     * 获取系统内存大小
+     * 得到内置存储空间的总容量
+     *
+     * @param context
      * @return
      */
-    public static String getSysteTotalMemorySize(Context context){
-        //获得ActivityManager服务的对象
-        ActivityManager mActivityManager = (ActivityManager)context.getSystemService(Context.ACTIVITY_SERVICE);
-        //获得MemoryInfo对象
-        ActivityManager.MemoryInfo memoryInfo = new ActivityManager.MemoryInfo() ;
-        //获得系统可用内存，保存在MemoryInfo对象上
-        mActivityManager.getMemoryInfo(memoryInfo) ;
-        long memSize = memoryInfo.totalMem ;
-        //字符类型转换
-        String availMemStr = formateFileSize(memSize);
-        return availMemStr ;
+    public static String getInternalToatalSpace(Context context) {
+        String path = Environment.getDataDirectory().getPath();
+        Log.d(TAG, "root path is " + path);
+        StatFs statFs = new StatFs(path);
+        long blockSize = statFs.getBlockSize();
+        long totalBlocks = statFs.getBlockCount();
+        long availableBlocks = statFs.getAvailableBlocks();
+
+        long totalSize = totalBlocks * blockSize;
+        long availSize = availableBlocks * blockSize;
+
+        String totalStr = Formatter.formatFileSize(context, totalSize);
+        String availStr = Formatter.formatFileSize(context, availSize);
+        Log.i(TAG, "总空间:" + totalStr + "\r" + "可存:" + availStr);
+        return totalStr;
     }
+
+    public static String getInternalAvailableSpace(Context context) {
+        String path = Environment.getDataDirectory().getPath();
+        Log.d(TAG, "root path is " + path);
+        StatFs statFs = new StatFs(path);
+        long blockSize = statFs.getBlockSize();
+        long totalBlocks = statFs.getBlockCount();
+        long availableBlocks = statFs.getAvailableBlocks();
+
+        long totalSize = totalBlocks * blockSize;
+        long availSize = availableBlocks * blockSize;
+
+        String totalStr = Formatter.formatFileSize(context, totalSize);
+        String availStr = Formatter.formatFileSize(context, availSize);
+        Log.i(TAG, "总空间:" + totalStr + "\r" + "可存:" + availStr);
+        return availStr;
+    }
+
+    /**
+     * 获取系统内存大小
+     *
+     * @param context
+     * @return
+     */
+    public static String getSysteTotalMemorySize(Context context) {
+        //获得ActivityManager服务的对象
+        ActivityManager mActivityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+        //获得MemoryInfo对象
+        ActivityManager.MemoryInfo memoryInfo = new ActivityManager.MemoryInfo();
+        //获得系统可用内存，保存在MemoryInfo对象上
+        mActivityManager.getMemoryInfo(memoryInfo);
+        long memSize = memoryInfo.totalMem;
+        //字符类型转换
+        String availMemStr = Formatter.formatFileSize(context, memSize);
+        return availMemStr;
+    }
+
 
     /**
      * 获取系统可用的内存大小
+     *
+     * @param context
      * @return
      */
-    public static String getSystemAvaialbeMemorySize(Context context){
+    public static String getSystemAvaialbeMemorySize(Context context) {
         //获得ActivityManager服务的对象
-        ActivityManager mActivityManager = (ActivityManager)context.getSystemService(Context.ACTIVITY_SERVICE);
+        ActivityManager mActivityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
         //获得MemoryInfo对象
-        ActivityManager.MemoryInfo memoryInfo = new ActivityManager.MemoryInfo() ;
+        ActivityManager.MemoryInfo memoryInfo = new ActivityManager.MemoryInfo();
         //获得系统可用内存，保存在MemoryInfo对象上
-        mActivityManager.getMemoryInfo(memoryInfo) ;
-        long memSize = memoryInfo.availMem ;
+        mActivityManager.getMemoryInfo(memoryInfo);
+        long memSize = memoryInfo.availMem;
 
         //字符类型转换
-        String availMemStr = formateFileSize(memSize);
-        return availMemStr ;
+        String availMemStr = Formatter.formatFileSize(context, memSize);
+        return availMemStr;
     }
+
 
     /**
      * 返回为字符串数组[0]为大小[1]为单位KB或MB
+     *
      * @param size
      * @return
      */
@@ -213,9 +277,7 @@ public class DeviceUtils {
                 }
             }
         }
-
         DecimalFormat formatter = new DecimalFormat("#0.00");// 字符显示格式
-        /* 每3个数字用,分隔，如1,000 */
         formatter.setGroupingSize(3);
         StringBuilder resultBuffer = new StringBuilder(formatter.format(fSzie));
         if (suffix != null) {
@@ -224,35 +286,185 @@ public class DeviceUtils {
         return resultBuffer.toString();
     }
 
+
     /**
-     * 获取手机内部空间大小
+     * @return List<String>
+     * @throws IOException
+     * @Title: getExtSDCardPaths
+     * @Description: to obtain storage paths, the first path is theoretically
+     * the returned value of
+     * Environment.getExternalStorageDirectory(), namely the
+     * primary external storage. It can be the storage of internal
+     * device, or that of external sdcard. If paths.size() >1,
+     * basically, the current device contains two type of storage:
+     * one is the storage of the device itself, one is that of
+     * external sdcard. Additionally, the paths is directory.
+     */
+    public static List<String> getExtSDCardPaths() {
+        List<String> paths = new ArrayList<String>();
+        String extFileStatus = Environment.getExternalStorageState();
+        File extFile = Environment.getExternalStorageDirectory();
+        if (extFileStatus.equals(Environment.MEDIA_MOUNTED)
+                && extFile.exists() && extFile.isDirectory()
+                && extFile.canWrite()) {
+            paths.add(extFile.getAbsolutePath());
+        }
+        try {
+            // obtain executed result of command line code of 'mount', to judge
+            // whether tfCard exists by the result
+            Runtime runtime = Runtime.getRuntime();
+            Process process = runtime.exec("mount");
+            InputStream is = process.getInputStream();
+            InputStreamReader isr = new InputStreamReader(is);
+            BufferedReader br = new BufferedReader(isr);
+            String line = null;
+            int mountPathIndex = 1;
+            while ((line = br.readLine()) != null) {
+                // format of sdcard file system: vfat/fuse
+                if ((!line.contains("fat") && !line.contains("fuse") && !line
+                        .contains("storage"))
+                        || line.contains("secure")
+                        || line.contains("asec")
+                        || line.contains("firmware")
+                        || line.contains("shell")
+                        || line.contains("obb")
+                        || line.contains("legacy") || line.contains("data")) {
+                    continue;
+                }
+                String[] parts = line.split(" ");
+                int length = parts.length;
+                if (mountPathIndex >= length) {
+                    continue;
+                }
+                String mountPath = parts[mountPathIndex];
+                if (!mountPath.contains("/") || mountPath.contains("data")
+                        || mountPath.contains("Data")) {
+                    continue;
+                }
+                File mountRoot = new File(mountPath);
+                if (!mountRoot.exists() || !mountRoot.isDirectory()
+                        || !mountRoot.canWrite()) {
+                    continue;
+                }
+                boolean equalsToPrimarySD = mountPath.equals(extFile
+                        .getAbsolutePath());
+                if (equalsToPrimarySD) {
+                    continue;
+                }
+
+                paths.add(mountPath);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        Logger.i("getExtSDCardPaths  paths：", new Gson().toJson(paths));
+        return paths;
+    }
+
+
+    /**
+     * 获取外置SD卡路径
+     *
      * @return
      */
-    public static String getTotalInternalStorgeSize() {
-        File path = Environment.getDataDirectory();
-        StatFs mStatFs = new StatFs(path.getPath());
-        long blockSize = mStatFs.getBlockSize();
-        long totalBlocks = mStatFs.getBlockCount();
-        long memSize = totalBlocks * blockSize;
+    public static List<String> getSDCardPaths() {
+        List<String> sdcardPaths = new ArrayList<String>();
+        String cmd = "cat /proc/mounts";
+        Runtime run = Runtime.getRuntime();// 返回与当前 Java 应用程序相关的运行时对象
+        try {
+            Process p = run.exec(cmd);// 启动另一个进程来执行命令
+            BufferedInputStream in = new BufferedInputStream(p.getInputStream());
+            BufferedReader inBr = new BufferedReader(new InputStreamReader(in));
 
-        //字符类型转换
-        String availMemStr = formateFileSize(memSize);
-        return availMemStr ;
+            String lineStr;
+            while ((lineStr = inBr.readLine()) != null) {
+                // 获得命令执行后在控制台的输出信息
+                Logger.i("CommonUtil:getSDCardPath", lineStr);
+
+                String[] temp = TextUtils.split(lineStr, " ");
+                // 得到的输出的第二个空格后面是路径
+                String result = temp[1];
+                File file = new File(result);
+                if (file.isDirectory() && file.canRead() && file.canWrite()) {
+                    Logger.d("directory can read can write:",
+                            file.getAbsolutePath());
+                    // 可读可写的文件夹未必是sdcard，我的手机的sdcard下的Android/obb文件夹也可以得到
+                    sdcardPaths.add(result);
+
+                }
+
+                // 检查命令是否执行失败。
+                if (p.waitFor() != 0 && p.exitValue() == 1) {
+                    // p.exitValue()==0表示正常结束，1：非正常结束
+                    Logger.e("CommonUtil:getSDCardPath", "命令执行失败!");
+                }
+            }
+            inBr.close();
+            in.close();
+        } catch (Exception e) {
+            Logger.e("CommonUtil:getSDCardPath", e.toString());
+            sdcardPaths.add(Environment.getExternalStorageDirectory()
+                    .getAbsolutePath());
+        }
+
+        optimize(sdcardPaths);
+        for (Iterator iterator = sdcardPaths.iterator(); iterator.hasNext(); ) {
+            String string = (String) iterator.next();
+            Logger.e("清除过后", string);
+        }
+        return sdcardPaths;
+    }
+
+
+    private static void optimize(List<String> sdcaredPaths) {
+        if (sdcaredPaths.size() == 0) {
+            return;
+        }
+        int index = 0;
+        while (true) {
+            if (index >= sdcaredPaths.size() - 1) {
+                String lastItem = sdcaredPaths.get(sdcaredPaths.size() - 1);
+                for (int i = sdcaredPaths.size() - 2; i >= 0; i--) {
+                    if (sdcaredPaths.get(i).contains(lastItem)) {
+                        sdcaredPaths.remove(i);
+                    }
+                }
+                return;
+            }
+
+            String containsItem = sdcaredPaths.get(index);
+            for (int i = index + 1; i < sdcaredPaths.size(); i++) {
+                if (sdcaredPaths.get(i).contains(containsItem)) {
+                    sdcaredPaths.remove(i);
+                    i--;
+                }
+            }
+
+            index++;
+        }
     }
 
     /**
-     * 获取手机内部可用空间大小
+     * 检查是否有外部TF卡
+     * 多余一个，则可以表示TF卡已挂载
+     * true 表示有外部TF卡
+     * @param context
      * @return
      */
-    public static String getAvailableInternalStorgeSize() {
-        File path = Environment.getDataDirectory();
-        StatFs mStatFs = new StatFs(path.getPath());
-        long blockSize = mStatFs.getBlockSize();
-        long availableBlocks = mStatFs.getAvailableBlocks();
-        long memSize = availableBlocks * blockSize;
-
-        //字符类型转换
-        String availMemStr = formateFileSize(memSize);
-        return availMemStr ;
+    public static boolean hasTFCard(Context context) {
+        try {
+            StorageManager sm = (StorageManager) context.getSystemService(Context.STORAGE_SERVICE);
+            Method getVolumePathsMethod = StorageManager.class.getMethod("getVolumePaths", null);
+            String[] paths = (String[]) getVolumePathsMethod.invoke(sm, null); // first element in paths[] is primary storage path
+            if (paths != null) {
+                for (int i = 0; i < paths.length; i++) {
+                    Log.d(TAG, "------------------ paths - " + i + " --------------- " + paths[i]);
+                }
+            }
+            return paths.length == 2;
+        } catch (Exception e) {
+            Log.e(TAG, "getPrimaryStoragePath() failed", e);
+        }
+        return false;
     }
 }

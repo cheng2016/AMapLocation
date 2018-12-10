@@ -3,6 +3,7 @@ package com.wecare.app.module;
 import android.app.Activity;
 import android.app.Application;
 import android.os.Bundle;
+import android.util.Log;
 
 import com.wecare.app.util.Logger;
 
@@ -11,7 +12,7 @@ import com.wecare.app.util.Logger;
  */
 
 public class BaseApplication extends Application {
-    private final static String TAG = "BaseApplication %s";
+    private final static String TAG = "Base %s";
     private Activity app_activity = null;
 
     @Override

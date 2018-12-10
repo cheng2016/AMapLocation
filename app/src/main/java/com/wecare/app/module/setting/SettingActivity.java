@@ -47,10 +47,11 @@ public class SettingActivity extends BaseActivity {
     protected void initData(Bundle savedInstanceState) {
         titleTV.setText("设备信息");
         mDataList.clear();
+        mDataList.add(new DeviceBean("应用版本", DeviceUtils.getAppVersionName(this)));
         mDataList.add(new DeviceBean("IMEI", DeviceUtils.getDeviceIMEI(this)));
         mDataList.add(new DeviceBean("型号", SystemUtils.getSystemModel()));
         mDataList.add(new DeviceBean("运行内存 ", DeviceUtils.getSysteTotalMemorySize(this)));
-        mDataList.add(new DeviceBean("系统容量", "总容量:" + DeviceUtils.getTotalInternalStorgeSize() + "-可用:" + DeviceUtils.getAvailableInternalStorgeSize()));
+        mDataList.add(new DeviceBean("系统容量", "总容量:" + DeviceUtils.getInternalToatalSpace(this) + "-可用:" + DeviceUtils.getInternalAvailableSpace(this)));
         mDataList.add(new DeviceBean("Android版本", SystemUtils.getAndroidVersion()));
         mDataList.add(new DeviceBean("版本号", SystemUtils.getSystemVersion()));
         mDataList.add(new DeviceBean("序列号", SystemUtils.getSerialNumber()));

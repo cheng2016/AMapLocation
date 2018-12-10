@@ -1,14 +1,22 @@
 package com.wecare.app.module.service;
 
 import android.app.IntentService;
+import android.content.Context;
 import android.content.Intent;
+import android.provider.Settings;
 import android.support.annotation.Nullable;
-import android.widget.Toast;
+import android.text.TextUtils;
 
 import com.wecare.app.App;
+import com.wecare.app.data.entity.VideoData;
+import com.wecare.app.data.source.local.VideoDaoUtils;
+import com.wecare.app.util.AirplaneModeUtils;
 import com.wecare.app.util.Constact;
 import com.wecare.app.util.DeviceUtils;
 import com.wecare.app.util.Logger;
+import com.wecare.app.util.NetUtils;
+import com.wecare.app.util.PreferenceConstants;
+import com.wecare.app.util.PreferenceUtils;
 import com.wecare.app.util.StringTcpUtils;
 
 import java.io.DataOutputStream;
@@ -39,12 +47,11 @@ public class UploadService extends IntentService {
 
 //    private static final String SERVER_IP = SocketService.HOST; // 服务端IP
 
-//    private static final int SERVER_PORT = SocketService.PORT + 4; // 服务端端口
+    //    private static final int SERVER_PORT = SocketService.PORT + 4; // 服务端端口
     //连接超时时间
     public final static int SOCKET_CONNECT_TIME_OUT = 10 * 1000;
     //读写超时时间
     public final static int SOCKET_READ_WRITE_TIME_OUT = 5 * 1000;
-
 
     private Socket client;
 
@@ -56,17 +63,42 @@ public class UploadService extends IntentService {
 
     @Override
     protected void onHandleIntent(@Nullable Intent intent) {
+        String userId = intent.getStringExtra("userId");
         int type = intent.getIntExtra("type", Constact.FILE_TYPE_IMAGE);
         String path = intent.getStringExtra("path");
+        long timeTemp = intent.getLongExtra("timeTemp", System.currentTimeMillis());
         Logger.i(TAG, "type：" + type + " path：" + path);
+
+        if (!NetUtils.isConnected(this) && type == Constact.FILE_TYPE_COLLISION) {
+            if (AirplaneModeUtils.isAirplaneModeOn(this)) {//监测是否打开飞行模式
+                Logger.i(TAG, "............onHandleIntent 关闭飞行模式上传碰撞视频............");
+                AirplaneModeUtils.setAirplaneModeOn(this, false);//如果已经打开则关闭飞行模式
+            }
+
+            VideoDaoUtils daoUtils = new VideoDaoUtils(this);
+            VideoData videoData = new VideoData();
+            videoData.setUserId(userId);
+            videoData.setType(type);
+            videoData.setPath(path);
+            videoData.setTimeTemp(timeTemp);
+            daoUtils.insert(videoData);
+            Logger.i(TAG, "离线碰撞视频存储到数据库中...............");
+            return;
+        }
         try {
-            client = new Socket(App.getInstance().HOST,App.getInstance().PORT + 4);
+            client = new Socket(App.getInstance().HOST, App.getInstance().PORT + 4);
             client.setSoTimeout(SOCKET_READ_WRITE_TIME_OUT);//设置socket超时时间，超过该时间自动断开连接
             File file = new File(path);
             if (file.exists()) {
                 fis = new FileInputStream(file);
                 dos = new DataOutputStream(client.getOutputStream());
-                String content = StringTcpUtils.buildUploadString(type, DeviceUtils.getDeviceIMEI(App.getInstance()), file.length());
+                String content;
+                if (TextUtils.isEmpty(userId)) {
+                    content = StringTcpUtils.buildUploadString(type, DeviceUtils.getDeviceIMEI(App.getInstance()), file.length(), timeTemp);
+                } else {
+                    content = StringTcpUtils.buildUploadString(userId, type, DeviceUtils.getDeviceIMEI(App.getInstance()), file.length(), timeTemp);
+                }
+                Logger.i(TAG, "content：" + content);
                 //总包长度 = 文本length +　文件length　＋ 1
                 long allByteLength = content.length();
                 allByteLength += file.length() + 1;
@@ -102,8 +134,6 @@ public class UploadService extends IntentService {
                         if (results.length > 0) {
                             if ("D01:72".equals(results[5].trim())) {
                                 Logger.i(TAG, "======== upload success ==========");
-//                                T.showShort(this, "upload success");
-                                Toast.makeText(this,"upload success",Toast.LENGTH_SHORT).show();
                             }
                         }
                     }
@@ -112,7 +142,7 @@ public class UploadService extends IntentService {
             }
         } catch (Exception e) {
             Logger.e(TAG, "onHandleIntent Exception", e);
-        }finally {
+        } finally {
             try {
                 closelAll();
             } catch (Exception e) {
@@ -129,6 +159,11 @@ public class UploadService extends IntentService {
             is.close();
             dos.close();
             client.close();
+        }
+        //熄火状态下才开启重新开启飞行模式
+        if (!AirplaneModeUtils.isAccOn()) {
+            Logger.i(TAG, "............closelAll 打开飞行模式............");
+            AirplaneModeUtils.setAirplaneModeOn(this, true);
         }
     }
 

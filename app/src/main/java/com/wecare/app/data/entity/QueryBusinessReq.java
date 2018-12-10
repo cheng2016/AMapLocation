@@ -37,11 +37,11 @@ public class QueryBusinessReq {
         this.type = type;
     }
 
-    public String getApp_key() {
+    public String getAppKey() {
         return app_key;
     }
 
-    public void setApp_key(String app_key) {
+    public void setAppKey(String app_key) {
         this.app_key = app_key;
     }
 }

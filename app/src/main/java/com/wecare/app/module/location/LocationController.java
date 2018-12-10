@@ -29,5 +29,4 @@ public class LocationController {
     public void setListener(UpdateLocationListener listener) {
         locationStrategy.setListener(listener);
     }
-
 }

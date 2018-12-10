@@ -1,19 +1,15 @@
 package com.wecare.app.module.main;
 
-import android.content.Context;
-import android.content.res.Resources;
-import android.graphics.Bitmap;
-import android.graphics.BitmapShader;
-import android.graphics.Canvas;
-import android.graphics.Paint;
-import android.graphics.RectF;
+/*
 
 import com.bumptech.glide.load.engine.bitmap_recycle.BitmapPool;
 import com.bumptech.glide.load.resource.bitmap.BitmapTransformation;
 
+*/
 /**
  * Created by chao.zhang on 2017/3/10.
- */
+ *//*
+
 
 public class GlideRoundTransform extends BitmapTransformation {
 
@@ -53,4 +49,4 @@ public class GlideRoundTransform extends BitmapTransformation {
     public String getId() {
         return getClass().getName() + Math.round(radius);
     }
-}
+}*/

@@ -6,12 +6,11 @@ import java.util.Date;
 public class StringTcpUtils {
     /**
      * 获取初始化数据
+     *
      * @param imei
      * @return
-     *
-     *
      */
-    public static String buildGetDataReq(String imei){
+    public static String buildGetDataReq(String imei) {
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyyMMddHHmmss");
         StringBuilder sb = new StringBuilder();
         sb.append(Constact.GET_DATA_TITLE).append(Constact.VERTICAL_LINE);
@@ -27,10 +26,11 @@ public class StringTcpUtils {
 
     /**
      * 初始化指令
+     *
      * @param imei
      * @return
      */
-    public static String buildInitReq(String imei){
+    public static String buildInitReq(String imei) {
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyyMMddHHmmss");
         StringBuilder sb = new StringBuilder();
         sb.append(Constact.CONNECT_TITLE).append(Constact.VERTICAL_LINE);
@@ -46,10 +46,11 @@ public class StringTcpUtils {
 
     /**
      * 初始化指令
+     *
      * @param imei
      * @return
      */
-    public static String buildInitResp(String imei){
+    public static String buildInitResp(String imei) {
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyyMMddHHmmss");
         StringBuilder sb = new StringBuilder();
         sb.append(Constact.CONNECT_TITLE).append(Constact.VERTICAL_LINE);
@@ -68,10 +69,11 @@ public class StringTcpUtils {
     /**
      * client request
      * 心跳连接请求指令
+     *
      * @param imei
      * @return
      */
-    public static String buildHeartReq(String imei){
+    public static String buildHeartReq(String imei) {
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyyMMddHHmmss");
         StringBuilder sb = new StringBuilder();
         sb.append(Constact.CONNECT_TITLE).append(Constact.VERTICAL_LINE);
@@ -88,10 +90,11 @@ public class StringTcpUtils {
     /**
      * sever response
      * 服务器心跳回应指令
+     *
      * @param imei
      * @return
      */
-    public static String buildHeartResp(String imei){
+    public static String buildHeartResp(String imei) {
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyyMMddHHmmss");
         StringBuilder sb = new StringBuilder();
         sb.append(Constact.CONNECT_TITLE).append(Constact.VERTICAL_LINE);
@@ -108,11 +111,11 @@ public class StringTcpUtils {
     }
 
 
-    public static String buildGpsContent(double latitude,double longtitude,
-                                         double height,float speed,float direction,
-                                         int signalnum,float signal,long pisitionType,
-                                         long positionTime,long lastPositionTime,
-                                         String baseStationInfo){
+    public static String buildGpsContent(double latitude, double longtitude,
+                                         double height, float speed, float direction,
+                                         int signalnum, float signal, long pisitionType,
+                                         long positionTime, long lastPositionTime,
+                                         String baseStationInfo) {
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyyMMddHHmmss");
         StringBuilder sb = new StringBuilder();
         sb.append(Constact.GPS_CONTENT_TITLE).append(Constact.SEPARATOR);
@@ -131,7 +134,7 @@ public class StringTcpUtils {
     }
 
 
-    public static String buildGpsString(String imei,String content){
+    public static String buildGpsString(String imei, String content) {
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyyMMddHHmmss");
         StringBuilder sb = new StringBuilder();
         sb.append(Constact.GPS_TITLE).append(Constact.VERTICAL_LINE);
@@ -145,7 +148,7 @@ public class StringTcpUtils {
         return sb.toString();
     }
 
-    public static String buildSuccessString(String imei,String dateStr){
+    public static String buildSuccessString(String imei, String dateStr) {
         StringBuilder sb = new StringBuilder();
         sb.append(Constact.COMMAND_TITLE).append(Constact.VERTICAL_LINE);
         sb.append(Constact.COMMAND_INIT).append(Constact.VERTICAL_LINE);
@@ -160,12 +163,13 @@ public class StringTcpUtils {
 
     /**
      * 上传文件string帮助类
-     * @param type 文件类型
-     * @param imei 设备imei号
+     *
+     * @param type   文件类型
+     * @param imei   设备imei号
      * @param length 内容大小
      * @return
      */
-    public static String buildUploadString(int type ,String imei,long length) {
+    public static String buildUploadString(int type, String imei, long length) {
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyyMMddHHmmss");
         StringBuilder sb = new StringBuilder();
         sb.append(Constact.UPLOAD_TITLE).append(Constact.VERTICAL_LINE);
@@ -181,11 +185,51 @@ public class StringTcpUtils {
         return sb.toString();
     }
 
+    public static String buildUploadString(int type, String imei, long length, long timeTemp) {
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyyMMddHHmmss");
+        StringBuilder sb = new StringBuilder();
+        sb.append(Constact.UPLOAD_TITLE).append(Constact.VERTICAL_LINE);
+        sb.append(Constact.COMMAND_INIT).append(Constact.VERTICAL_LINE);
+        sb.append(Constact.APP_KEY).append(Constact.VERTICAL_LINE);
+        sb.append(imei).append(Constact.VERTICAL_LINE);
+        sb.append(length).append(Constact.VERTICAL_LINE);
+        sb.append(simpleDateFormat.format(new Date(timeTemp))).append(Constact.VERTICAL_LINE);
+//        sb.append(Constact.FILE_TITLE);
+        sb.append(type).append(Constact.VERTICAL_LINE);
+        sb.append(type).append(Constact.VERTICAL_LINE);
+        sb.append(length).append(Constact.VERTICAL_LINE);
+        return sb.toString();
+    }
+
+    /**
+     * 上传带上用户id
+     * @param userId
+     * @param type
+     * @param imei
+     * @param length
+     * @param timeTemp
+     * @return
+     */
+    public static String buildUploadString(String userId, int type, String imei, long length, long timeTemp) {
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyyMMddHHmmss");
+        StringBuilder sb = new StringBuilder();
+        sb.append(Constact.UPLOAD_TITLE).append(Constact.VERTICAL_LINE);
+        sb.append(Constact.COMMAND_INIT).append(Constact.VERTICAL_LINE);
+        sb.append(Constact.APP_KEY).append(Constact.VERTICAL_LINE);
+        sb.append(imei).append(Constact.VERTICAL_LINE);
+        sb.append(length).append(Constact.VERTICAL_LINE);
+        sb.append(simpleDateFormat.format(new Date(timeTemp))).append(Constact.VERTICAL_LINE);
+//        sb.append(Constact.FILE_TITLE);
+        sb.append(type + userId).append(Constact.VERTICAL_LINE);
+        sb.append(type).append(Constact.VERTICAL_LINE);
+        sb.append(length).append(Constact.VERTICAL_LINE);
+        return sb.toString();
+    }
+
     /**
      * int整数转换为4字节的byte数组
      *
-     * @param i
-     *            整数
+     * @param i 整数
      * @return byte数组
      */
     public static byte[] intToByte4(int i) {
@@ -197,9 +241,9 @@ public class StringTcpUtils {
         return targets;
     }
 
-    public static void main(String[] args){
+    public static void main(String[] args) {
 
-        String [] strings = new String[8];
+        String[] strings = new String[8];
         strings[0] = Constact.GPS_TITLE + Constact.VERTICAL_LINE;
         strings[1] = Constact.COMMAND_INIT + Constact.VERTICAL_LINE;
         strings[2] = "2" + Constact.VERTICAL_LINE;
@@ -210,31 +254,31 @@ public class StringTcpUtils {
         strings[7] = "7";
         StringBuilder sb = new StringBuilder();
 
-        for (int i = 0 ;i < strings.length;i++){
+        for (int i = 0; i < strings.length; i++) {
             sb.append(strings[i]);
         }
         System.out.println(sb.toString());
 
-        System.out.println(buildGpsString("355855624415838","D06:1,3,114.01954666666667,22.533786666666668,63.1,0.801,294.68,7,1,20180613133900,20180613133500,"));
+        System.out.println(buildGpsString("355855624415838", "D06:1,3,114.01954666666667,22.533786666666668,63.1,0.801,294.68,7,1,20180613133900,20180613133500,"));
 
         System.out.println(buildHeartReq("355855624415839"));
 
         String response = "C08|1|4a5f9cdc8ec1557f0b8fa2456145439c|000000000000000|6|D01:72|20180625164213|\u0001\u0001\u0001";
         String[] results = response.split("\\|");
-        if(results.length > 0){
-            if(results[5].startsWith("D01")){
+        if (results.length > 0) {
+            if (results[5].startsWith("D01")) {
                 String result = results[5].substring(4);
                 System.out.println(result);
             }
-            if("D01:72".equals(results[5])){
+            if ("D01:72".equals(results[5])) {
                 System.out.println("UPLOAD SUCCESS");
             }
         }
 
-        String a1= "C01|1|4a5f9cdc8ec1557f0b8fa2456145439c|000000000000000|5|D01:1|20180626034421|\u0001\u0001\u0001";
-        String a2= "C01|1|4a5f9cdc8ec1557f0b8fa2456145439c|000000000000000|5|D01:1|20180626034421|\u0001\u0001\u0001";
+        String a1 = "C01|1|4a5f9cdc8ec1557f0b8fa2456145439c|000000000000000|5|D01:1|20180626034421|\u0001\u0001\u0001";
+        String a2 = "C01|1|4a5f9cdc8ec1557f0b8fa2456145439c|000000000000000|5|D01:1|20180626034421|\u0001\u0001\u0001";
 
-        String a3= "C02|1|4a5f9cdc8ec1557f0b8fa2456145439c|000000000000000|76|D04:47.106.148.192,2993,sit.wecarelove.com,15,108000,1800;D05:20180703145316|20180703065318|\u0001\u0001\u0001";
+        String a3 = "C02|1|4a5f9cdc8ec1557f0b8fa2456145439c|000000000000000|76|D04:47.106.148.192,2993,sit.wecarelove.com,15,108000,1800;D05:20180703145316|20180703065318|\u0001\u0001\u0001";
 
         String[] a3s = a3.split("\\|");
         System.out.println(a3s[5]);
@@ -244,12 +288,12 @@ public class StringTcpUtils {
         String s = a3s[0].substring(4);
         System.out.println(s);
         a3s = s.split("\\,");
-        for (int i = 0;i<a3s.length;i++){
-            System.out.print(a3s[i]+" | ");
+        for (int i = 0; i < a3s.length; i++) {
+            System.out.print(a3s[i] + " | ");
         }
 
         System.out.println();
-        System.out.println(buildSuccessString("000000000000000","20180710105320"));
+        System.out.println(buildSuccessString("000000000000000", "20180710105320"));
 //        C16|1|4a5f9cdc8ec1557f0b8fa2456145439c|000000000000000|6|D01:72|20180710105320|
 //        C16|1|4a5f9cdc8ec1557f0b8fa2456145439c|000000000000000|6|D01:61|20180710105320|
     }

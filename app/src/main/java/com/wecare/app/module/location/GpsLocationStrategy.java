@@ -13,7 +13,6 @@ import android.location.LocationProvider;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 
-import com.wecare.app.App;
 import com.wecare.app.util.Logger;
 
 import java.text.SimpleDateFormat;
@@ -106,13 +105,15 @@ public class GpsLocationStrategy implements LocationStrategy {
 
         @Override
         public void onStatusChanged(String provider, int status, Bundle extras) {
-            Logger.i(TAG, "GPSLocationListener onStatusChanged：" + status);
             switch (status) {
                 case LocationProvider.AVAILABLE:
+                    Logger.i(TAG, "GPSLocationListener onStatusChanged：AVAILABLE " + status);
                     break;
                 case LocationProvider.OUT_OF_SERVICE:
+                    Logger.i(TAG, "GPSLocationListener onStatusChanged：OUT_OF_SERVICE " + status);
                     break;
                 case LocationProvider.TEMPORARILY_UNAVAILABLE:
+                    Logger.i(TAG, "GPSLocationListener onStatusChanged：TEMPORARILY_UNAVAILABLE " + status);
                     break;
                 default:
                     break;
@@ -161,8 +162,8 @@ public class GpsLocationStrategy implements LocationStrategy {
                 }
             }
             mGpsCount = numSatelliteList.size();
+//            changeLocationMode();
 //            Logger.i(TAG, "updateGpsStatus mGpsCount：" + mGpsCount);
-            changeLocationMode();
         }
     }
 

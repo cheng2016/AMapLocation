@@ -4,21 +4,26 @@ apply plugin: 'org.greenrobot.greendao'
 
 greendao {
     //数据库的schema版本，也可以理解为数据库版本号
-    schemaVersion 2
+    schemaVersion 6
     //设置DaoMaster、DaoSession、Dao包名，也就是要放置这些类的包的全路径。
     daoPackage 'com.wecare.app.data.source.local.greendao'
     //设置DaoMaster、DaoSession、Dao目录
     targetGenDir 'src/main/java'
 }
 
+def getTime() {
+    return new java.text.SimpleDateFormat("yyyyMMddHHmm").format(new Date());
+//    return new java.text.SimpleDateFormat("yyyyMMdd").format(new Date());
+}
+
 android {
     compileSdkVersion 27
     defaultConfig {
         applicationId "com.wecare.app"
-        minSdkVersion 15
+        minSdkVersion 17
         targetSdkVersion 27
-        versionCode 2
-        versionName "2.0"
+        versionCode 12
+        versionName "2.0.${getTime()}"
         multiDexEnabled true
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
@@ -29,7 +34,6 @@ android {
             assets.srcDirs = ['assets']
         }
     }
-
 
     signingConfigs {
         signing {
@@ -42,9 +46,24 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled false
+//            minifyEnabled false
+//            shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.signing
+
+//            applicationVariants.all { variant ->
+//                variant.outputs.all { output ->
+//                    def outputFile = output.outputFile
+//                    if (outputFile.name.contains("release") && outputFile != null && outputFile.name.endsWith('.apk')) {
+//                        def fileName = "WecareLocation_v${versionName}.apk"
+//                        outputFileName = new File("../release/", fileName)
+//                    }
+//                }
+//            }
+        }
+        debug {
+            signingConfig signingConfigs.signing
+//            signingConfig signingConfigs.signing
         }
     }
 
@@ -70,7 +89,7 @@ android {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    implementation 'com.android.support:appcompat-v7:27.0.0'
+    implementation 'com.android.support:appcompat-v7:27.0.+'
     implementation 'com.android.support.constraint:constraint-layout:1.1.2'
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
@@ -92,15 +111,22 @@ dependencies {
 
     //图片加载库
     implementation 'com.squareup.picasso:picasso:2.5.2'
+    implementation 'com.squareup.okhttp:okhttp:2.4.0'
 
     //数据库类库
     implementation 'org.greenrobot:greendao:3.2.2+'
     implementation 'org.greenrobot:greendao-generator:3.2.2+'
-    implementation 'com.github.yuweiguocn:GreenDaoUpgradeHelper:v2.0.3+'
+//    implementation 'com.github.yuweiguocn:GreenDaoUpgradeHelper:v2.0.3+'
 
     implementation 'io.netty:netty-all:4.1.25.Final'
 
-    implementation 'com.github.bumptech.glide:glide:3.7.0'
+//    implementation 'com.github.bumptech.glide:glide:3.7.0'
+
+    //工具库utils
+//    implementation 'com.blankj:utilcode:1.7.1'
+
+    implementation 'com.yanzhenjie.andserver:api:2.0.1'
+    annotationProcessor 'com.yanzhenjie.andserver:processor:2.0.1'
 }
 
 //构建task

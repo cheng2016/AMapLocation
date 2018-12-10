@@ -16,8 +16,6 @@ public interface MainContract {
          */
         void onLocationChanged(Location location,int gpsCount,long lastPositionTime);
 
-        void showStates(String message);
-
         void queryZxingQrSuccess(String url);
 
         void queryBusinessSucess(QueryBusinessResp resp);
@@ -32,5 +30,7 @@ public interface MainContract {
         void queryBusiness(String type);
 
         void queryZxingQr();
+
+        void getSensorData(Context context);
     }
 }

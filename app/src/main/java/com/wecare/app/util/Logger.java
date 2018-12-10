@@ -1,12 +1,12 @@
 package com.wecare.app.util;
 
-import android.content.Context;
 import android.os.Environment;
-import android.os.Handler;
-import android.os.Message;
 import android.os.Process;
 import android.util.Log;
 
+import com.wecare.app.App;
+
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -14,8 +14,11 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.text.DateFormat;
+import java.text.Format;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
+import java.util.Date;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * 文件日志工具类
@@ -23,22 +26,84 @@ import java.util.Calendar;
  * Created by chengzj 2018/06/29
  */
 public class Logger {
+    public static final String TAG = Logger.class.getSimpleName();
+    private static final DateFormat LOG_TIME_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    private static final String LOG_FORMAT = "%s  %d/%s  %c/%s  %s ";
+    private static final String LINE_SEP = System.getProperty("line.separator");
+    public static final int V = Log.VERBOSE;
+    public static final int D = Log.DEBUG;
+    public static final int I = Log.INFO;
+    public static final int W = Log.WARN;
+    public static final int E = Log.ERROR;
+    public static final int A = Log.ASSERT;
+    private static final char[] T = new char[]{'V', 'D', 'I', 'W', 'E', 'A'};
 
-    private static boolean isWriter;
+    private static final ExecutorService EXECUTOR_SERVICE = Executors.newSingleThreadExecutor();
 
-    private static Level currentLevel;
+    private static final Builder BUILDER = new Builder();
 
-    private static String pkgName;
+    public static class Builder {
+        private boolean isWriter = true;
 
-    private static int myPid;
+        private Level currentLevel = Level.VERBOSE;
 
-    private static String logFilePath;
+        private String defaultTag = "Logger";
 
-    private static DateFormat FILE_NAME_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
+        private String defaultDir;
 
-    private static DateFormat LOG_TIME_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        private String pkgName;
 
-    private static String LOG_FORMAT = "%s  %d-%d/%s  %s/%s：";
+        private int myPid;
+
+        private Builder() {
+            pkgName = App.getInstance().getPackageName();
+            myPid = Process.myPid();
+            if (isSDCardOK()) {
+                defaultDir = Environment.getExternalStorageDirectory() + "/wecare/logger/";
+            } else {
+                defaultDir = App.getInstance().getCacheDir().getAbsolutePath() + "/wecare/logger";
+            }
+            Log.i(TAG, "pkgName：" + pkgName);
+            Log.i(TAG, "myPid：" + myPid);
+            Log.i(TAG, "defaultDir：" + defaultDir);
+        }
+
+        /**
+         * 设置是否写入文件
+         *
+         * @param writer
+         */
+        public void setWriter(boolean writer) {
+            this.isWriter = writer;
+        }
+
+        /**
+         * 设置日志等级
+         *
+         * @param currentLevel
+         */
+        public void setCurrentLevel(Level currentLevel) {
+            this.currentLevel = currentLevel;
+        }
+
+        /**
+         * 设置日志默认存储路径
+         *
+         * @param defaultDir
+         */
+        public void setDefaultDir(String defaultDir) {
+            this.defaultDir = defaultDir;
+        }
+
+        /**
+         * 设置日志输出标记
+         *
+         * @param defaultTag
+         */
+        public void setDefaultTag(String defaultTag) {
+            this.defaultTag = defaultTag;
+        }
+    }
 
     /**
      * 日志级别
@@ -65,149 +130,72 @@ public class Logger {
         }
     }
 
-    public static final void i(String tag, String msg) {
-        if (currentLevel.value > Level.INFO.value)
+    public static final void i(String target, String msg) {
+        log(I, target, msg);
+    }
+
+    public static final void v(String target, String msg) {
+        log(V, target, msg);
+    }
+
+    public static final void d(String target, String msg) {
+        log(D, target, msg);
+    }
+
+    public static final void e(String target, String msg) {
+        log(E, target, msg);
+    }
+
+    public static final void e(String target, String msg, Throwable throwable) {
+        log(E, target, msg, throwable);
+    }
+
+    public static final void w(String target, String msg) {
+        log(W, target, msg);
+    }
+
+    public static final void w(String target, String msg, Throwable throwable) {
+        log(W, target, msg, throwable);
+    }
+
+    public static final void log(int type, String tag, String msg) {
+        if (BUILDER.currentLevel.value > Level.WARN.value) {
             return;
-        if (isWriter) {
-            write(tag, msg, "I");
         }
-        Log.i(tag, msg);
+        if (BUILDER.isWriter) {
+            write(tag, msg, type);
+        }
+        Log.println(type, TAG, tag + " " + msg);
     }
 
-    public static final void i(String tag, String msg, Throwable throwable) {
-        if (currentLevel.value > Level.INFO.value)
+    public static final void log(int type, String tag, String msg, Throwable throwable) {
+        if (BUILDER.currentLevel.value > Level.WARN.value) {
             return;
-        if (isWriter) {
-            write(tag, msg, "I", throwable);
         }
-        Log.i(tag, msg, throwable);
-    }
-
-    public static final void v(String tag, String msg) {
-        if (currentLevel.value > Level.VERBOSE.value)
-            return;
-        if (isWriter) {
-            write(tag, msg, "V");
+        if (BUILDER.isWriter) {
+            write(tag, msg, type, throwable);
         }
-        Log.v(tag, msg);
+        Log.println(type, TAG, tag + " " + msg);
     }
 
-    public static final void v(String tag, String msg, Throwable throwable) {
-        if (currentLevel.value > Level.VERBOSE.value)
-            return;
-        if (isWriter) {
-            write(tag, msg, "V", throwable);
-        }
-        Log.v(tag, msg, throwable);
-    }
-
-    public static final void d(String tag, String msg) {
-        if (currentLevel.value > Level.DEBUG.value)
-            return;
-        if (isWriter) {
-            write(tag, msg, "D");
-        }
-        Log.d(tag, msg);
-    }
-
-    public static final void d(String tag, String msg, Throwable throwable) {
-        if (currentLevel.value > Level.DEBUG.value)
-            return;
-        if (isWriter) {
-            write(tag, msg, "D", throwable);
-        }
-        Log.d(tag, msg, throwable);
-    }
-
-    public static final void e(String tag, String msg) {
-        if (currentLevel.value > Level.ERROR.value)
-            return;
-        if (isWriter) {
-            write(tag, msg, "E");
-        }
-        Log.e(tag, msg);
-    }
-
-    public static final void e(String tag, String msg, Throwable throwable) {
-        if (currentLevel.value > Level.ERROR.value)
-            return;
-        if (isWriter) {
-            write(tag, msg, "E", throwable);
-        }
-        Log.e(tag, msg, throwable);
-    }
-
-    public static final void w(String tag, String msg) {
-        if (currentLevel.value > Level.WARN.value)
-            return;
-        if (isWriter) {
-            write(tag, msg, "W");
-        }
-        Log.w(tag, msg);
-    }
-
-    public static final void w(String tag, String msg, Throwable throwable) {
-        if (currentLevel.value > Level.WARN.value)
-            return;
-        if (isWriter) {
-            write(tag, msg, "W", throwable);
-        }
-        Log.w(tag, msg, throwable);
-    }
-
-    public static final void i(Object target, String msg) {
-        i(target.getClass().getSimpleName(), msg);
-    }
-
-    public static final void i(Object target, String msg, Throwable throwable) {
-        i(target.getClass().getSimpleName(), msg, throwable);
-    }
-
-    public static final void v(Object target, String msg) {
-        v(target.getClass().getSimpleName(), msg);
-    }
-
-    public static final void v(Object target, String msg, Throwable throwable) {
-        v(target.getClass().getSimpleName(), msg, throwable);
-    }
-
-    public static final void d(Object target, String msg) {
-        d(target.getClass().getSimpleName(), msg);
-    }
-
-    public static final void d(Object target, String msg, Throwable throwable) {
-        d(target.getClass().getSimpleName(), msg, throwable);
-    }
-
-    public static final void e(Object target, String msg) {
-        e(target.getClass().getSimpleName(), msg);
-    }
-
-    public static final void e(Object target, String msg, Throwable throwable) {
-        e(target.getClass().getSimpleName(), msg, throwable);
-    }
-
-    public static final void w(Object target, String msg) {
-        w(target.getClass().getSimpleName(), msg);
-    }
-
-    public static final void w(Object target, String msg, Throwable throwable) {
-        w(target.getClass().getSimpleName(), msg, throwable);
-    }
 
     /**
      * 通过handler写入日志
+     *
      * @param tag
      * @param msg
-     * @param level
+     * @param type
      */
-    private static final void write(String tag, String msg, String level) {
-        String timeStamp = LOG_TIME_FORMAT.format(Calendar.getInstance().getTime());
-        final StringBuilder sb = new StringBuilder(String.format(LOG_FORMAT, timeStamp, myPid, myPid, pkgName, level, tag));
+    private static final void write(String tag, String msg, int type) {
+        String time = LOG_TIME_FORMAT.format(new Date(System.currentTimeMillis()));
+        String date = time.substring(0, 10);
+        String fullPath = BUILDER.defaultDir + date + ".txt";
+        String head = String.format(LOG_FORMAT, time, BUILDER.myPid, BUILDER.pkgName, T[type - V], BUILDER.defaultTag, tag);
+        StringBuilder sb = new StringBuilder(head);
         sb.append(msg);
-        Message message = new Message();
-        message.obj = sb.toString();
-        mHandler.sendMessage(message);
+        sb.append(LINE_SEP);
+        //打印到文件日志中
+        input2File(sb.toString(),fullPath);
     }
 
     /**
@@ -215,18 +203,20 @@ public class Logger {
      *
      * @param tag       日志标签
      * @param msg       日志内容
-     * @param level     日志级别
+     * @param type      日志级别
      * @param throwable 异常捕获
      */
-    private static final void write(String tag, String msg, String level, Throwable throwable) {
-        String timeStamp = LOG_TIME_FORMAT.format(Calendar.getInstance().getTime());
-        StringBuilder sb = new StringBuilder(String.format(LOG_FORMAT, timeStamp, myPid, myPid, pkgName, level, tag));
+    private static final void write(String tag, String msg, int type, Throwable throwable) {
+        String time = LOG_TIME_FORMAT.format(new Date(System.currentTimeMillis()));
+        String date = time.substring(0, 10);
+        String fullPath = BUILDER.defaultDir + date + ".txt";
+        String head = String.format(LOG_FORMAT, time, BUILDER.myPid, BUILDER.pkgName, T[type - V], BUILDER.defaultTag, tag);
+        StringBuilder sb = new StringBuilder(head);
         sb.append(msg);
-        sb.append(System.getProperty("line.separator"));
+        sb.append(LINE_SEP);
         sb.append(saveCrashInfo(throwable));
-        Message message = new Message();
-        message.obj = sb.toString();
-        mHandler.sendMessage(message);
+        //打印到文件日志中
+        input2File(sb.toString(),fullPath);
     }
 
     private static String saveCrashInfo(Throwable ex) {
@@ -245,79 +235,49 @@ public class Logger {
         return sb.toString();
     }
 
-    /**
-     * 日志组件初始化
-     *
-     * @param appCtx   application 上下文
-     * @param isWriter 是否保存文件
-     * @param level    日志级别
-     */
-    public static final void initialize(Context appCtx, boolean isWriter, Level level) {
-        currentLevel = level;
-        if (level == Level.CLOSE) {
-            Logger.isWriter = false;
+    private static void input2File(final String input,final String fullPath) {
+        if (!createOrExistsFile(fullPath)) {
+            Log.e(TAG, "create " + fullPath + " failed!");
             return;
         }
-        Logger.isWriter = isWriter;
-        if (!Logger.isWriter) {//不保存日志到文件
-            return;
-        }
-        String logFoldPath;
-        if (isSDCardOK()) {
-            logFoldPath = Environment.getExternalStorageDirectory() + "/wecare/logger/";
-        } else {
-            logFoldPath = appCtx.getCacheDir().getAbsolutePath() + "/../logger/log";
-        }
-        pkgName = appCtx.getPackageName();
-        myPid = Process.myPid();
-        File logFold = new File(logFoldPath);
-        boolean flag;
-        if (!(flag = logFold.exists()))
-            flag = logFold.mkdirs();
-        if (!flag) {
-            Logger.isWriter = false;
-            return;
-        }
-        logFilePath = logFoldPath + FILE_NAME_FORMAT.format(Calendar.getInstance().getTime()) + ".txt";
-        try {
-            File logFile = new File(logFilePath);
-            if (!(flag = logFile.exists())) {
-                flag = logFile.createNewFile();
-            }
-            Logger.isWriter = isWriter && flag;
-        } catch (IOException e) {
-            e.printStackTrace();
-            Logger.isWriter = false;
-        }
-    }
-
-    private static Handler mHandler = new Handler(){
-        @Override
-        public void handleMessage(Message msg) {
-            super.handleMessage(msg);
-            String content = (String) msg.obj;
-
-            FileWriter fileWriter = null;
-            File logFile = new File(logFilePath);
-            try {
-                fileWriter = new FileWriter(logFile, true);
-                fileWriter.write(System.getProperty("line.separator"));
-                fileWriter.append(content);
-                fileWriter.flush();
-                fileWriter.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }finally {
-                if(fileWriter != null){
+        EXECUTOR_SERVICE.execute(new Runnable() {
+            @Override
+            public void run() {
+                BufferedWriter bw = null;
+                try {
+                    bw = new BufferedWriter(new FileWriter(fullPath, true));
+                    bw.write(input);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    Log.e(TAG, "log to " + fullPath + " failed!");
+                } finally {
                     try {
-                        fileWriter.close();
+                        if (bw != null) {
+                            bw.close();
+                        }
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
                 }
             }
+        });
+    }
+
+    private static boolean createOrExistsFile(String fullPath) {
+        File file = new File(fullPath);
+        if (file.exists()) return file.isFile();
+        if (!createOrExistsDir(file.getParentFile())) return false;
+        try {
+            return file.createNewFile();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
         }
-    };
+    }
+
+    private static boolean createOrExistsDir(final File file) {
+        return file != null && (file.exists() ? file.isDirectory() : file.mkdirs());
+    }
 
     //读写sd卡时的判断
     public static boolean isSDCardOK() {
@@ -330,10 +290,11 @@ public class Logger {
     }
 
     public static void main(String[] args) {
-        String timeStamp = LOG_TIME_FORMAT.format(Calendar.getInstance().getTime());
+        String timeStamp = LOG_TIME_FORMAT.format(new Date());
+        char[] T = new char[]{'V', 'D', 'I', 'W', 'E', 'A'};
         String tag = "tag";
         String msg = "this is a message!";
-        String str = String.format(LOG_FORMAT, timeStamp, 123, 123, "com.cheng.app", "V", tag);
+        String str = String.format(LOG_FORMAT, timeStamp, 123, "com.cheng.app", T[0], "logg", tag);
         System.out.println(str + msg);
     }
 }

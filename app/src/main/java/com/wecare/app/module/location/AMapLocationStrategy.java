@@ -1,8 +1,6 @@
 package com.wecare.app.module.location;
 
 import android.content.Context;
-import android.location.Location;
-import android.widget.Toast;
 
 import com.amap.api.location.AMapLocation;
 import com.amap.api.location.AMapLocationClient;
@@ -13,7 +11,6 @@ import com.google.gson.Gson;
 import com.wecare.app.App;
 import com.wecare.app.util.DeviceUtils;
 import com.wecare.app.util.Logger;
-import com.wecare.app.util.T;
 import com.wecare.app.util.Utils;
 
 public class AMapLocationStrategy implements LocationStrategy {
@@ -65,7 +62,7 @@ public class AMapLocationStrategy implements LocationStrategy {
         AMapLocationClientOption.setLocationProtocol(AMapLocationClientOption.AMapLocationProtocol.HTTP);//可选， 设置网络请求的协议。可选HTTP或者HTTPS。默认为HTTP
         mOption.setSensorEnable(false);//可选，设置是否使用传感器。默认是false
         mOption.setWifiScan(true); //可选，设置是否开启wifi扫描。默认为true，如果设置为false会同时停止主动刷新，停止以后完全依赖于系统刷新，定位位置可能存在误差
-        mOption.setLocationCacheEnable(true); //可选，设置是否使用缓存定位，默认为true
+        mOption.setLocationCacheEnable(true); //可选，设置是否使用缓存定位，默认为true，这里设置不适用缓存定位
         mOption.setGeoLanguage(AMapLocationClientOption.GeoLanguage.DEFAULT);//可选，设置逆地理信息的语言，默认值为默认语言（根据所在地区选择语言）
         return mOption;
     }
@@ -138,7 +135,7 @@ public class AMapLocationStrategy implements LocationStrategy {
                     }
                 } else {
                     Logger.e(TAG, "onLocationChanged error，location ：" + new Gson().toJson(location));
-                    T.showShort(context, "onLocationChanged error：" + sb.toString());
+//                    T.showShort(context, "onLocationChanged error：" + sb.toString());
                     sb.append("经    度    : " + location.getLongitude() + "\n");
                     sb.append("纬    度    : " + location.getLatitude() + "\n");
                     //定位失败
@@ -162,7 +159,8 @@ public class AMapLocationStrategy implements LocationStrategy {
                 String result = sb.toString();
 //                view.showStates(result);
             } else {
-                Toast.makeText(context, "定位失败，loc is null", Toast.LENGTH_SHORT).show();
+                Logger.e(TAG, "定位失败，loc is null");
+//                T.showShort(context, "定位失败，loc is null");
             }
         }
     };

@@ -10,7 +10,11 @@ import com.wecare.app.App;
 import com.wecare.app.data.entity.LocationData;
 import com.wecare.app.data.source.local.LocationDaoUtils;
 import com.wecare.app.module.main.MainActivity;
+import com.wecare.app.util.Constact;
+import com.wecare.app.util.DeviceUtils;
 import com.wecare.app.util.Logger;
+import com.wecare.app.util.PreferenceConstants;
+import com.wecare.app.util.PreferenceUtils;
 import com.wecare.app.util.StringTcpUtils;
 import com.wecare.app.util.ThreadPoolManager;
 
@@ -34,15 +38,15 @@ public class SocketService extends Service {
 //    public static final String IMEI = DeviceUtils.getDeviceIMEI(App.getInstance());
 
     //心跳包内容
-    public static final String HEART_BEAT_STRING = StringTcpUtils.buildHeartReq(App.getInstance().IMEI);
+    public static String HEART_BEAT_STRING;
 
-    public static final String HEART_BEAT_STRING_RESPONSE = StringTcpUtils.buildHeartResp(App.getInstance().IMEI);
+    public static String HEART_BEAT_STRING_RESPONSE;
 
-    public static final String INIT_BEAT_STRING = StringTcpUtils.buildInitReq(App.getInstance().IMEI);
+    public static String INIT_BEAT_STRING;
 
-    public static final String INIT_BEAT_STRING_RESPONSE = StringTcpUtils.buildInitResp(App.getInstance().IMEI);
+    public static String INIT_BEAT_STRING_RESPONSE;
 
-    public static final String GET_DATA_STRING = StringTcpUtils.buildGetDataReq(App.getInstance().IMEI);
+    public static String GET_DATA_STRING;
 
     private WeakReference<Socket> mWeakSocketReference;
 
@@ -59,6 +63,17 @@ public class SocketService extends Service {
     public final static int SQL_MAX_COUNT = 30;
 
     private Handler initHandler = new Handler();
+
+    String imei;
+
+    private void initData() {
+        imei = PreferenceUtils.getPrefString(this, PreferenceConstants.IMEI, DeviceUtils.getDeviceIMEI(this));
+        HEART_BEAT_STRING = StringTcpUtils.buildHeartReq(imei);
+        HEART_BEAT_STRING_RESPONSE = StringTcpUtils.buildHeartResp(imei);
+        INIT_BEAT_STRING = StringTcpUtils.buildInitReq(imei);
+        INIT_BEAT_STRING_RESPONSE = StringTcpUtils.buildInitResp(imei);
+        GET_DATA_STRING = StringTcpUtils.buildGetDataReq(imei);
+    }
 
 /*    Runnable initRunnable = new Runnable() {
         @Override
@@ -221,9 +236,13 @@ public class SocketService extends Service {
                                     App.getInstance().BASE_URL = results[0];
                                     App.getInstance().PORT = Integer.valueOf(results[1]);
                                     App.getInstance().HOST = results[2];
-//                                    App.getInstance().MIN_GPS_UPLOAD_TIME = Integer.valueOf(results[3]) * 1000L;
-//                                    App.getInstance().SAME_GPS_UPLOAD_TIME = Integer.valueOf(results[4]) * 1000L;
+                                    App.getInstance().MIN_GPS_UPLOAD_TIME = Integer.valueOf(results[3]) * 1000L;
+                                    App.getInstance().SAME_GPS_UPLOAD_TIME = Integer.valueOf(results[4]) * 1000L;
                                     App.getInstance().HEART_BEAT_RATE = Integer.valueOf(results[5]) * 1000L;
+
+                                    Intent intent = new Intent(MainActivity.ACTION_RECEIVER_COMMAND);
+                                    intent.putExtra("command_type", Constact.COMMAND_START_LOCATION);
+                                    sendBroadcast(intent);
                                 }
                             } else {
                                 if (message.startsWith("C16")) {
@@ -236,7 +255,7 @@ public class SocketService extends Service {
                                         intent.putExtra("command_type", commandType);
                                         sendBroadcast(intent);
                                         //回复服务器消息，告诉服务器我已接受到该消息
-                                        sendMessage(StringTcpUtils.buildSuccessString(App.getInstance().IMEI, results[6]));
+                                        sendMessage(StringTcpUtils.buildSuccessString(imei, results[6]));
                                     }
 
                                 } else {
@@ -309,6 +328,7 @@ public class SocketService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        initData();
         Logger.i(TAG, "onCreate, Thread: " + Thread.currentThread().getName());
         initSocketClient();
 

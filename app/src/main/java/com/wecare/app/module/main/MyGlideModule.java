@@ -1,6 +1,6 @@
 package com.wecare.app.module.main;
 
-import android.content.Context;
+/*
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.GlideBuilder;
@@ -37,3 +37,4 @@ public class MyGlideModule implements GlideModule {
 
     }
 }
+*/

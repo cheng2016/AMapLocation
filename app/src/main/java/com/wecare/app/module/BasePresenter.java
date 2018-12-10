@@ -5,7 +5,6 @@ package com.wecare.app.module;
  */
 
 public interface BasePresenter {
-    void subscribe();
 
     void unsubscribe();
 }
