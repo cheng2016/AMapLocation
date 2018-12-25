@@ -18,7 +18,6 @@ import com.wecare.app.App;
 import com.wecare.app.data.entity.LocationData;
 import com.wecare.app.data.entity.QueryBusinessResp;
 import com.wecare.app.data.source.local.LocationDaoUtils;
-import com.wecare.app.module.main.MainActivity;
 import com.wecare.app.module.main.MainContract;
 import com.wecare.app.module.main.MainPresenter;
 import com.wecare.app.module.service.UploadService;
@@ -30,10 +29,7 @@ import com.wecare.app.util.NetUtils;
 import com.wecare.app.util.PreferenceConstants;
 import com.wecare.app.util.PreferenceUtils;
 import com.wecare.app.util.StringTcpUtils;
-import com.wecare.app.util.StringUtils;
 import com.wecare.app.util.ToastUtils;
-
-import org.w3c.dom.Text;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -269,13 +265,20 @@ public class BootService extends Service implements MainContract.View {
 
     @Override
     public void queryBusinessSucess(QueryBusinessResp resp) {
-        if (resp != null && resp.getData() != null && !TextUtils.isEmpty(resp.getData().getHead_image_url())) {
-            String headUrl = resp.getData().getHead_image_url();
-            String nickName = resp.getData().getNick_name();
-            PreferenceUtils.setPrefString(this, PreferenceConstants.HEAD_URL, headUrl);
-            PreferenceUtils.setPrefString(this, PreferenceConstants.NICK_NAME, nickName);
-            //下载图片到本地，并写入系统设置
-            mMainPresenter.loadImageToSettings(this, headUrl);
+        if (resp != null && resp.getData() != null) {
+            if(!TextUtils.isEmpty(resp.getData().getHead_image_url())
+                    && !TextUtils.isEmpty(resp.getData().getNick_name())){
+                String headUrl = resp.getData().getHead_image_url();
+                String nickName = resp.getData().getNick_name();
+//                PreferenceUtils.setPrefString(this, PreferenceConstants.HEAD_URL, headUrl);
+//                PreferenceUtils.setPrefString(this, PreferenceConstants.NICK_NAME, nickName);
+                //下载图片到本地，并写入系统设置
+                mMainPresenter.loadImageToSettings(this, headUrl);
+            } else {
+//                PreferenceUtils.setPrefString(this, PreferenceConstants.HEAD_URL, "");
+//                PreferenceUtils.setPrefString(this, PreferenceConstants.NICK_NAME, "");
+                mMainPresenter.queryZxingQr();
+            }
 
             QueryBusinessResp.DataBean bean = resp.getData();
             if (!TextUtils.isEmpty(bean.getLat())
@@ -285,8 +288,8 @@ public class BootService extends Service implements MainContract.View {
                         Integer.valueOf(TextUtils.isEmpty(bean.getStyle()) ? "0" : bean.getStyle()));
             }
         } else {
-            PreferenceUtils.setPrefString(this, PreferenceConstants.HEAD_URL, "");
-            PreferenceUtils.setPrefString(this, PreferenceConstants.NICK_NAME, "");
+//            PreferenceUtils.setPrefString(this, PreferenceConstants.HEAD_URL, "");
+//            PreferenceUtils.setPrefString(this, PreferenceConstants.NICK_NAME, "");
             mMainPresenter.queryZxingQr();
         }
     }

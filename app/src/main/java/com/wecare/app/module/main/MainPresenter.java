@@ -197,6 +197,7 @@ public class MainPresenter implements MainContract.Presenter, UpdateLocationList
     }
 
     public void loadImageToSettings(final Context context, final String url) {
+        Logger.i(TAG, "loadImageToSettings   url：" + url);
         Observable.create(new ObservableOnSubscribe<String>() {
             @Override
             public void subscribe(ObservableEmitter<String> emitter) throws Exception {
@@ -316,7 +317,7 @@ public class MainPresenter implements MainContract.Presenter, UpdateLocationList
                 startStop = 0;
                 isDriving = true;
                 Logger.i(TAG, "Driving.....");
-            } else{
+            } else {
                 if (startStop == 0) {
                     startStop = System.currentTimeMillis();
                 } else {

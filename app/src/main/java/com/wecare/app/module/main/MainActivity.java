@@ -19,7 +19,6 @@ import android.widget.TextView;
 
 import com.amap.api.location.AMapLocation;
 import com.squareup.picasso.Picasso;
-import com.wecare.app.App;
 import com.wecare.app.R;
 import com.wecare.app.data.entity.LocationData;
 import com.wecare.app.data.entity.QueryBusinessResp;
@@ -36,13 +35,8 @@ import com.wecare.app.util.NetUtils;
 import com.wecare.app.util.PreferenceConstants;
 import com.wecare.app.util.PreferenceUtils;
 import com.wecare.app.util.StringTcpUtils;
-import com.wecare.app.util.StringUtils;
 import com.wecare.app.util.ToastUtils;
 import com.wecare.app.util.WifiUtils;
-
-import java.util.regex.Matcher;
-
-import io.netty.util.internal.StringUtil;
 
 public class MainActivity extends CheckPermissionsActivity implements MainContract.View, View.OnClickListener {
     public static final long ONE_DAY = 9 * 60 * 60 * 1000L;
@@ -209,14 +203,19 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
 
     @Override
     public void queryBusinessSucess(QueryBusinessResp resp) {
-        if (resp != null && resp.getData() != null && !TextUtils.isEmpty(resp.getData().getHead_image_url())) {
-            headUrl = resp.getData().getHead_image_url();
-            nickName = resp.getData().getNick_name();
-
-            showWxing();
-
-            //下载图片到本地，并写入系统设置
-            mMainPresenter.loadImageToSettings(this, headUrl);
+        if (resp != null && resp.getData() != null) {
+            if(!TextUtils.isEmpty(resp.getData().getHead_image_url())
+                    && !TextUtils.isEmpty(resp.getData().getNick_name())){
+                headUrl = resp.getData().getHead_image_url();
+                nickName = resp.getData().getNick_name();
+                showWxing();
+                //下载图片到本地，并写入系统设置
+                mMainPresenter.loadImageToSettings(this, headUrl);
+             } else {
+                headUrl = "";
+                nickName = "";
+                mMainPresenter.queryZxingQr();
+            }
 
             QueryBusinessResp.DataBean bean = resp.getData();
             if (!TextUtils.isEmpty(bean.getLat())
@@ -283,7 +282,7 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
      * 注册广播监听；
      */
     public void registerActionReceiver() {
-        Logger.d(TAG, "---------------- registerReceiver----------------");
+        Logger.d(TAG, "---------------- registerReceiver ----------------");
         mReceiver = new ActionReceiver();
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(ACTION_RE_MICRO_OR_PICTURE);
@@ -307,7 +306,7 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
      * 注销广播；
      */
     public void unregisterActionReceiver() {
-        Logger.d(TAG, "-------------------- unRegisterReceiver------------------");
+        Logger.d(TAG, "-------------------- unRegisterReceiver ------------------");
         unregisterReceiver(mReceiver);
         unregisterReceiver(mCommandReceiver);
         unregisterReceiver(mNetworkStateReceiver);
@@ -356,6 +355,9 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
                                     i.putExtra("type", Constact.FILE_TYPE_COLLISION);
                                 }
                                 i.putExtra("userId", "");
+                            } else if ("CLICK".equals(key)) {
+                                Logger.i(TAG, "用户手动拍照，不予处理");
+                                return;
                             } else {
                                 i.putExtra("userId", key);
                                 if ("pic".equals(type)) {
