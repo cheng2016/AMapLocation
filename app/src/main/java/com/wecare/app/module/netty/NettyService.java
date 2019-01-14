@@ -142,7 +142,7 @@ public class NettyService extends Service implements NettyContract.View {
 
     public synchronized void initNettySocket() {
         Logger.i(TAG, "initNettySocket, Thread: " + Thread.currentThread().getName());
-        if (NetUtils.isConnected(this)) {
+        if (NetUtils.isNetworkAvailable(this)) {
             if (mChannelFuture == null || mChannelFuture.channel() == null || !isConnect) {
                 new Thread(new Runnable() {
                     @Override
@@ -191,7 +191,7 @@ public class NettyService extends Service implements NettyContract.View {
 
     private synchronized void connect() {
         Logger.i(TAG, "connect is excute!");
-        if (NetUtils.isConnected(this)) {
+        if (NetUtils.isNetworkAvailable(this)) {
             try {
                 // 发起异步连接操作
                 mChannelFuture = mBootstrap.connect(App.getInstance().HOST, App.getInstance().PORT).addListener(new ChannelFutureListener() {
@@ -342,7 +342,7 @@ public class NettyService extends Service implements NettyContract.View {
             Logger.e(TAG, "channelInactive 掉线了");
             isConnect = false;
             //在线情况下，断线直接执行重连机制
-            initNettySocket();
+            sendMessage(HEART_BEAT_STRING);
         }
 
         @Override

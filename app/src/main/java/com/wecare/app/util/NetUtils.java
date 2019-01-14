@@ -4,9 +4,13 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
+import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
+import android.os.Build;
 import android.telephony.TelephonyManager;
+import android.util.Log;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
@@ -57,7 +61,6 @@ public class NetUtils {
      * Check if valid IPV4 address.
      *
      * @param input the address string to check for validity.
-     *
      * @return True if the input parameter is a valid IPv4 address.
      */
     public static boolean isIPv4Address(String input) {
@@ -97,6 +100,49 @@ public class NetUtils {
                 .getSystemService(Activity.CONNECTIVITY_SERVICE);
         NetworkInfo info = cm.getActiveNetworkInfo();
         return info != null && info.isConnected();
+    }
+
+    /**
+     * 检测网络连通性（是否能访问网络）
+     *
+     * @return
+     */
+    public static boolean isNetworkOnline() {
+        Runtime runtime = Runtime.getRuntime();
+        try {
+            Process ipProcess = runtime.exec("ping -c 3 www.baidu.com");
+            int exitValue = ipProcess.waitFor();
+            Logger.i("Avalible", "Process:" + exitValue);
+            return (exitValue == 0);
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    /**
+     * 判断网络是否连接，并且可访问网络
+     * 当NetworkCapabilities的描述中有VALIDATED这个描述时，此网络是真正可用的
+     *
+     * @param context
+     * @return
+     */
+    public static boolean isNetworkAvailable(Context context) {
+        ConnectivityManager cm = (ConnectivityManager) context
+                .getSystemService(Activity.CONNECTIVITY_SERVICE);
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.M) {
+            NetworkCapabilities networkCapabilities = cm.getNetworkCapabilities(cm.getActiveNetwork());
+            if (networkCapabilities != null) {
+                Logger.i("Avalible", "NetworkCapalbilities:" + networkCapabilities.toString());
+                return networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
+            } else {
+                NetworkInfo info = cm.getActiveNetworkInfo();
+                return info != null && info.isConnected() && isNetworkOnline();
+            }
+        } else {
+            NetworkInfo info = cm.getActiveNetworkInfo();
+            return info != null && info.isConnected() && isNetworkOnline();
+        }
     }
 
     /**

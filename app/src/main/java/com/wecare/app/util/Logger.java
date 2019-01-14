@@ -1,7 +1,11 @@
 package com.wecare.app.util;
 
+import android.Manifest;
+import android.content.Context;
+import android.content.pm.PackageManager;
 import android.os.Environment;
 import android.os.Process;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
 
 import com.wecare.app.App;
@@ -28,7 +32,7 @@ import java.util.concurrent.Executors;
 public class Logger {
     public static final String TAG = Logger.class.getSimpleName();
     private static final DateFormat LOG_TIME_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-    private static final String LOG_FORMAT = "%s  %d/%s  %c/%s  %s ";
+    private static final String LOG_FORMAT = "%s  %d/%d/%s  %c/%s  %s ";
     private static final String LINE_SEP = System.getProperty("line.separator");
     public static final int V = Log.VERBOSE;
     public static final int D = Log.DEBUG;
@@ -55,8 +59,11 @@ public class Logger {
 
         private int myPid;
 
+        private int pkgCode;
+
         private Builder() {
             pkgName = App.getInstance().getPackageName();
+            pkgCode = AppUtils.getVersionCode(App.getInstance());
             myPid = Process.myPid();
             if (isSDCardOK()) {
                 defaultDir = Environment.getExternalStorageDirectory() + "/wecare/logger/";
@@ -64,6 +71,7 @@ public class Logger {
                 defaultDir = App.getInstance().getCacheDir().getAbsolutePath() + "/wecare/logger";
             }
             Log.i(TAG, "pkgName：" + pkgName);
+            Log.i(TAG, "pkgCode：" + pkgCode);
             Log.i(TAG, "myPid：" + myPid);
             Log.i(TAG, "defaultDir：" + defaultDir);
         }
@@ -190,12 +198,12 @@ public class Logger {
         String time = LOG_TIME_FORMAT.format(new Date(System.currentTimeMillis()));
         String date = time.substring(0, 10);
         String fullPath = BUILDER.defaultDir + date + ".txt";
-        String head = String.format(LOG_FORMAT, time, BUILDER.myPid, BUILDER.pkgName, T[type - V], BUILDER.defaultTag, tag);
+        String head = String.format(LOG_FORMAT, time, BUILDER.myPid, BUILDER.pkgCode, BUILDER.pkgName, T[type - V], BUILDER.defaultTag, tag);
         StringBuilder sb = new StringBuilder(head);
         sb.append(msg);
         sb.append(LINE_SEP);
         //打印到文件日志中
-        input2File(sb.toString(),fullPath);
+        input2File(sb.toString(), fullPath);
     }
 
     /**
@@ -210,13 +218,13 @@ public class Logger {
         String time = LOG_TIME_FORMAT.format(new Date(System.currentTimeMillis()));
         String date = time.substring(0, 10);
         String fullPath = BUILDER.defaultDir + date + ".txt";
-        String head = String.format(LOG_FORMAT, time, BUILDER.myPid, BUILDER.pkgName, T[type - V], BUILDER.defaultTag, tag);
+        String head = String.format(LOG_FORMAT, time, BUILDER.myPid, BUILDER.pkgCode, BUILDER.pkgName, T[type - V], BUILDER.defaultTag, tag);
         StringBuilder sb = new StringBuilder(head);
         sb.append(msg);
         sb.append(LINE_SEP);
         sb.append(saveCrashInfo(throwable));
         //打印到文件日志中
-        input2File(sb.toString(),fullPath);
+        input2File(sb.toString(), fullPath);
     }
 
     private static String saveCrashInfo(Throwable ex) {
@@ -235,7 +243,11 @@ public class Logger {
         return sb.toString();
     }
 
-    private static void input2File(final String input,final String fullPath) {
+    private static void input2File(final String input, final String fullPath) {
+        if (lacksPermissions(App.getInstance(), Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+            Log.e(TAG, "很抱歉，没有读写权限，无法写入SD卡中");
+            return;
+        }
         if (!createOrExistsFile(fullPath)) {
             Log.e(TAG, "create " + fullPath + " failed!");
             return;
@@ -261,6 +273,28 @@ public class Logger {
                 }
             }
         });
+    }
+
+    /**
+     * 判断权限集合
+     * permissions 权限数组
+     * return true-表示没有改权限  false-表示权限已开启
+     */
+    public static boolean lacksPermissions(Context mContexts, String... args) {
+        for (String permission : args) {
+            if (lacksPermission(mContexts, permission)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 判断是否缺少权限
+     */
+    private static boolean lacksPermission(Context context, String permission) {
+        return ContextCompat.checkSelfPermission(context, permission) ==
+                PackageManager.PERMISSION_DENIED;
     }
 
     private static boolean createOrExistsFile(String fullPath) {

@@ -112,7 +112,7 @@ public class BootService extends Service implements MainContract.View {
         mLocationDaoUtils = new LocationDaoUtils(this);
         registerActionReceiver();
         PreferenceUtils.setPrefBoolean(this, PreferenceConstants.SERVICE_BOOT_STATE, true);
-        initNettySocket();
+        startNettyService();
     }
 
     @Override
@@ -139,7 +139,11 @@ public class BootService extends Service implements MainContract.View {
         return null;
     }
 
+    //是否关闭
+    public boolean isClose = false;
+
     private void shutdownNetty() {
+        isClose = true;
         Logger.e(TAG, "shutdownNetty!");
         if (null != mChannelFuture && null != mChannelFuture.channel()) {
             mChannelFuture.channel().close();
@@ -151,9 +155,15 @@ public class BootService extends Service implements MainContract.View {
         }
     }
 
+    public void startNettyService(){
+        isClose = false;
+        initNettySocket();
+        Logger.w(TAG, "startNettyService, Thread: " + Thread.currentThread().getName());
+    }
+
     private synchronized void initNettySocket() {
         Logger.i(TAG, "initNettySocket, Thread: " + Thread.currentThread().getName() + " isCloseNetty：" + isCloseNetty);
-        if (NetUtils.isConnected(context) && !isCloseNetty) {
+        if (NetUtils.isNetworkAvailable(context) && !isCloseNetty) {
             if (mChannelFuture == null || mChannelFuture.channel() == null || !isConnect) {
                 new Thread(new Runnable() {
                     @Override
@@ -193,7 +203,7 @@ public class BootService extends Service implements MainContract.View {
 
     private synchronized void connect(final Bootstrap bootstrap) {
         Logger.i(TAG, "connect is excute!  isCloseNetty：" + isCloseNetty);
-        if (NetUtils.isConnected(this)) {
+        if (NetUtils.isNetworkAvailable(this)) {
             if (!isCloseNetty) {
                 try {
                     // 发起异步连接操作
@@ -240,7 +250,7 @@ public class BootService extends Service implements MainContract.View {
         String content = StringTcpUtils.buildGpsContent(location.getLongitude(), location.getLatitude(), location.getAltitude(),
                 location.getSpeed(), location.getBearing(), gpsCount, location.getAccuracy(), positionType, location.getTime(), lastPositionTime, "");
         content = StringTcpUtils.buildGpsString(imei, content);
-        if (NetUtils.isConnected(this)) {
+        if (NetUtils.isNetworkAvailable(this)) {
             sendMessage(content);
         } else {
             if (mLocationDaoUtils == null) {
@@ -435,7 +445,7 @@ public class BootService extends Service implements MainContract.View {
         public void channelInactive(ChannelHandlerContext ctx) {
             Logger.e(TAG, "channelInactive 掉线了");
             isConnect = false;
-            initNettySocket();
+            sendMessage(HEART_BEAT_STRING);
         }
 
         @Override
@@ -454,7 +464,9 @@ public class BootService extends Service implements MainContract.View {
                 mChannelFuture.channel().writeAndFlush(msg);
             }
         } else {
-            initNettySocket();
+            if(!isClose){
+                initNettySocket();
+            }
         }
     }
 
