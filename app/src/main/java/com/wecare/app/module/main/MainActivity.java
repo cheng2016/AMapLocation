@@ -441,8 +441,9 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
+            Logger.i(TAG, "NetworkStateReceiver is work， action：" + action);
             if (action.equals(ConnectivityManager.CONNECTIVITY_ACTION)) {
-                if (NetUtils.isConnected(MainActivity.this)) {
+                if (NetUtils.isNetworkAvailable(MainActivity.this)) {
                     if (mSocketService != null)
                         mSocketService.sendMessage(mSocketService.HEART_BEAT_STRING);
                 }
@@ -452,7 +453,6 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
                 boolean isEnable = Settings.Global.getInt(context.getContentResolver(), Settings.Global.AIRPLANE_MODE_ON, -1) == 1;
                 Logger.d(TAG, "AirplaneModeReceiver - isEnable : " + isEnable);
             }
-            Logger.i(TAG, "NetworkStateReceiver is work， action：" + action);
         }
 
     }

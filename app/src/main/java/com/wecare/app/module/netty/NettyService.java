@@ -4,9 +4,11 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
+import android.os.Bundle;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.IBinder;
-import android.provider.Settings;
+import android.os.Message;
 
 import com.google.gson.Gson;
 import com.wecare.app.App;
@@ -79,13 +81,11 @@ public class NettyService extends Service implements NettyContract.View {
 
     private EventLoopGroup eventLoopGroup;
 
-    private ChannelFuture mChannelFuture;
+    private Channel mChannel;
 
     private boolean isConnect = false;
 
     private Handler handler = new Handler();
-
-    private long sendTime = 0L;
 
     private LocationDaoUtils daoUtils;
 
@@ -104,7 +104,6 @@ public class NettyService extends Service implements NettyContract.View {
         GET_DATA_STRING = StringTcpUtils.buildGetDataReq(imei);
         daoUtils = new LocationDaoUtils(this);
         context = this;
-
     }
 
     @Override
@@ -125,7 +124,15 @@ public class NettyService extends Service implements NettyContract.View {
         PreferenceUtils.setPrefBoolean(this, PreferenceConstants.SERVICE_NETTY_STATE, true);
         new NettyPresenter(this);
         initData();
-        initNettySocket();
+        /**
+         * 在子线程 建立连接并向服务器发送请求，这里采用了`HanlderThread`+`Handler`的方案。
+         * 通过`Looper`依次从`Handler`的队列中获取信息，逐个进行处理，保证安全，不会出现混乱。
+         */
+        workThread = new HandlerThread(NettyService.class.getName());
+        workThread.start();
+        mWorkHandler = new Handler(workThread.getLooper(), mWorkHandlerCallback);
+        mWorkHandler.sendEmptyMessage(MESSAGE_INIT);
+        mWorkHandler.sendEmptyMessageDelayed(MESSAGE_CONNECT, 100);
     }
 
     @Override
@@ -140,88 +147,16 @@ public class NettyService extends Service implements NettyContract.View {
         return false;
     }
 
-    public synchronized void initNettySocket() {
-        Logger.i(TAG, "initNettySocket, Thread: " + Thread.currentThread().getName());
-        if (NetUtils.isNetworkAvailable(this)) {
-            if (mChannelFuture == null || mChannelFuture.channel() == null || !isConnect) {
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            if (mBootstrap == null) {
-                                mBootstrap = new Bootstrap();
-                                eventLoopGroup = new NioEventLoopGroup();
-                                mBootstrap.group(eventLoopGroup);
-                                mBootstrap.channel(NioSocketChannel.class);
-                                mBootstrap.option(ChannelOption.TCP_NODELAY, true);
-//                                    mBootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 3000);
-                                mBootstrap.option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, 64 * 1024);
-                                mBootstrap.option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 32 * 1024);
-                                mBootstrap.handler(new ChannelInitializer() {
-                                    @Override
-                                    protected void initChannel(Channel ch) {
-                                        ChannelPipeline pipeline = ch.pipeline();
-                                        ByteBuf delimiter = Unpooled.copiedBuffer(UP_MSG_END_FLAG.getBytes());
-                                        pipeline.addLast(new DelimiterBasedFrameDecoder(Integer.MAX_VALUE, delimiter));
-                                        pipeline.addLast(new IdleStateHandler(0,
-                                                0, 2, TimeUnit.MINUTES));
-                                        pipeline.addLast("decoder", new StringDecoder());
-                                        pipeline.addLast("encoder", new StringEncoder());
-                                        pipeline.addLast(new NettyClientHandler());
-                                    }
-                                });
-                            }
-                            connect();
-                        } catch (Exception e) {
-                            isConnect = false;
-                            Logger.e(TAG, "initNettySocket, Exception: ", e);
-                        }
-                    }
-                }).start();
-            }
-        }
-    }
-
     @Override
     public void onDestroy() {
         Logger.i(TAG, "onDestroy, Thread: " + Thread.currentThread().getName());
         PreferenceUtils.setPrefBoolean(this, PreferenceConstants.SERVICE_NETTY_STATE, false);
         super.onDestroy();
+        //释放资源
+        workThread.quit();
     }
 
-    private synchronized void connect() {
-        Logger.i(TAG, "connect is excute!");
-        if (NetUtils.isNetworkAvailable(this)) {
-            try {
-                // 发起异步连接操作
-                mChannelFuture = mBootstrap.connect(App.getInstance().HOST, App.getInstance().PORT).addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        if (future.isSuccess()) {
-                            isConnect = true;
-                            Logger.i(TAG, "Connect to server successfully!");
-                        } else {
-                            isConnect = false;
-                            Logger.i(TAG, "Failed to connect to server，After 10s, the connection will be reconnected");
-                            future.channel().eventLoop().schedule(new Runnable() {
-                                @Override
-                                public void run() {
-                                    connect();
-                                }
-                            }, 10, TimeUnit.SECONDS);
-                        }
-                    }
-                }).sync();
-                // 当代客户端链路关闭
-                mChannelFuture.channel().closeFuture().sync();
-            } catch (Exception e) {
-                Logger.e(TAG, "initNettySocket connect Exception: ", e);
-                isConnect = false;
-            }
-        }
-    }
-
-    class NettyClientHandler extends ChannelInboundHandlerAdapter {
+    final class NettyClientHandler extends ChannelInboundHandlerAdapter {
         @Override
         public void channelActive(ChannelHandlerContext ctx) {
             Logger.i(TAG, "channelActive 上线了");
@@ -243,9 +178,6 @@ public class NettyService extends Service implements NettyContract.View {
                 Logger.i(TAG, "response init success：" + message);
             } else if (HEART_BEAT_STRING_RESPONSE.startsWith(message)) {//处理心跳回复
                 Logger.i(TAG, "response heart：" + message);
-                sendTime = System.currentTimeMillis();//记录上一次发送心跳的时间
-                handler.removeCallbacks(heartRunnable);
-                handler.postDelayed(heartRunnable, App.getInstance().HEART_BEAT_RATE);
             } else if (message.startsWith("C02")) {
                 Logger.i(TAG, "response init data：" + message);
                 String[] results = message.split("\\|");
@@ -279,7 +211,7 @@ public class NettyService extends Service implements NettyContract.View {
                         //优先回复服务器消息，告诉服务器我已接受到该消息，以免广播接收器卡顿
                         sendMessage(StringTcpUtils.buildSuccessString(imei, results[6]));
                         int commandType;
-                        if(results[5].substring(4).contains("61") || results[5].substring(4).contains("63")){
+                        if (results[5].substring(4).contains("61") || results[5].substring(4).contains("63")) {
                             commandType = Integer.parseInt(results[5].substring(4, 6));
                             String userId = results[5].substring(6);
                             Logger.i(TAG, "命令：" + commandType + "  userId：" + userId);
@@ -293,7 +225,7 @@ public class NettyService extends Service implements NettyContract.View {
                                 default:
                                     break;
                             }
-                        }else {
+                        } else {
                             commandType = Integer.parseInt(results[5].substring(4));
                             //发送广播
                             Intent intent = new Intent(MainActivity.ACTION_RECEIVER_COMMAND);
@@ -319,12 +251,12 @@ public class NettyService extends Service implements NettyContract.View {
             if (evt instanceof IdleStateEvent) {
                 IdleStateEvent event = (IdleStateEvent) evt;
                 if (event.state().equals(IdleState.READER_IDLE)) {
-                    Logger.i(TAG, "userEventTriggered READER_IDLE 读超时，长期没收到服务器推送数据！Channel is active：" + mChannelFuture.channel().isActive());
+                    Logger.i(TAG, "userEventTriggered READER_IDLE 读超时，长期没收到服务器推送数据！Channel is active：" + mChannel.isActive());
                     //可以选择重新连接
                     isConnect = false;
                     ctx.close();
                 } else if (event.state().equals(IdleState.WRITER_IDLE)) {
-                    Logger.i(TAG, "userEventTriggered WRITER_IDLE 写超时，长期未向服务器发送数据！Channel is active：" + mChannelFuture.channel().isActive());
+                    Logger.i(TAG, "userEventTriggered WRITER_IDLE 写超时，长期未向服务器发送数据！Channel is active：" + mChannel.isActive());
                     //发送心跳包
                     Logger.e(TAG, "sendMessage：" + HEART_BEAT_STRING);
                     ctx.writeAndFlush(HEART_BEAT_STRING);
@@ -342,7 +274,7 @@ public class NettyService extends Service implements NettyContract.View {
             Logger.e(TAG, "channelInactive 掉线了");
             isConnect = false;
             //在线情况下，断线直接执行重连机制
-            sendMessage(HEART_BEAT_STRING);
+            sendReconnectMessage();
         }
 
         @Override
@@ -353,27 +285,6 @@ public class NettyService extends Service implements NettyContract.View {
         }
     }
 
-    public void sendMessage(String msg) {
-        LogUtils.file(msg);
-        Logger.e(TAG, "sendMessage：" + msg);
-        if (mChannelFuture != null && mChannelFuture.channel() != null && isConnect) {
-            //不是心跳则直接发送该消息
-            if (!HEART_BEAT_STRING.equals(msg)) {
-                mChannelFuture.channel().writeAndFlush(msg);
-            }
-            //心跳补偿机制，每次发送消息时判断是否心跳包时间间隔到达指定时间
-            if (System.currentTimeMillis() - sendTime >= App.getInstance().HEART_BEAT_RATE) {
-                //移除之前的心跳定时任务，马上发送心跳
-                handler.removeCallbacks(heartRunnable);
-                mChannelFuture.channel().writeAndFlush(HEART_BEAT_STRING);
-                Logger.i(TAG, "发送心跳时间间隔为：" + ((System.currentTimeMillis() - sendTime) / 1000)
-                        + "s  约定心跳间隔为：" + (App.getInstance().HEART_BEAT_RATE / 1000) + "s");
-            }
-        } else {
-            initNettySocket();
-        }
-    }
-
     Runnable uploadRunnable = new Runnable() {
         @Override
         public void run() {
@@ -381,9 +292,9 @@ public class NettyService extends Service implements NettyContract.View {
             Logger.i(TAG, "greendao excute location data size is：" + list.size());
             if (list != null && list.size() > 0) {
                 for (LocationData data : list) {
-                    if (mChannelFuture != null && mChannelFuture.channel() != null && isConnect) {
+                    if (mChannel != null && mChannel.isOpen() && isConnect) {
                         Logger.e(TAG, "sendMessage：" + data.getContent());
-                        mChannelFuture.channel().writeAndFlush(data.getContent());
+                        mChannel.writeAndFlush(data.getContent());
                         daoUtils.deleteLocationData(data);
                     }
                 }
@@ -418,10 +329,117 @@ public class NettyService extends Service implements NettyContract.View {
         }
     };
 
-    Runnable heartRunnable = new Runnable() {
+    private final String ACTION_SEND_MSG = "action_send_msg";
+
+    private final int MESSAGE_INIT = 100;
+    private final int MESSAGE_CONNECT = 200;
+    private final int MESSAGE_SEND = 300;
+
+    private HandlerThread workThread = null;
+
+    private Handler mWorkHandler = null;
+
+    private Handler.Callback mWorkHandlerCallback = new Handler.Callback() {
         @Override
-        public void run() {
-            sendMessage(HEART_BEAT_STRING);
+        public boolean handleMessage(Message msg) {
+            switch (msg.what) {
+                case MESSAGE_INIT:
+                    Logger.d(TAG, "WorkHandlerCallback 初始化Tcp服务 ....");
+                    initNetty();
+                    break;
+                case MESSAGE_CONNECT:
+                    Logger.d(TAG, "WorkHandlerCallback 连接远程服务器 ....");
+                    connectNetty();
+                    break;
+                case MESSAGE_SEND:
+                    Logger.d(TAG, "WorkHandlerCallback 向服务器发送数据 ....");
+                    String sendMsg = msg.getData().getString(ACTION_SEND_MSG);
+                    try {
+                        if (mChannel != null && mChannel.isOpen() && isConnect) {
+                            mChannel.writeAndFlush(sendMsg).sync();
+                            Logger.d(TAG, "send succeed " + sendMsg);
+                        } else {
+                            throw new Exception("channel is null | closed | isConnect：" + isConnect);
+                        }
+                    } catch (Exception e) {
+                        Logger.e(TAG, "send failed ", e);
+                        sendReconnectMessage();
+                    }
+                    break;
+            }
+            return true;
         }
     };
+
+    private void initNetty(){
+        mBootstrap = new Bootstrap();
+        eventLoopGroup = new NioEventLoopGroup();
+        mBootstrap.group(eventLoopGroup);
+        mBootstrap.channel(NioSocketChannel.class);
+        mBootstrap.option(ChannelOption.TCP_NODELAY, true);
+//                                    mBootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 3000);
+        mBootstrap.option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, 64 * 1024);
+        mBootstrap.option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 32 * 1024);
+        mBootstrap.handler(new ChannelInitializer() {
+            @Override
+            protected void initChannel(Channel ch) {
+                ChannelPipeline pipeline = ch.pipeline();
+                ByteBuf delimiter = Unpooled.copiedBuffer(UP_MSG_END_FLAG.getBytes());
+                pipeline.addLast(new DelimiterBasedFrameDecoder(Integer.MAX_VALUE, delimiter));
+                pipeline.addLast(new IdleStateHandler(0,
+                        0, 2, TimeUnit.MINUTES));
+                pipeline.addLast("decoder", new StringDecoder());
+                pipeline.addLast("encoder", new StringEncoder());
+                pipeline.addLast(new NettyClientHandler());
+            }
+        });
+    }
+
+    private void connectNetty(){
+        if (!isConnect) {
+            try {
+                // 发起异步连接操作
+                mChannel = mBootstrap.connect(App.getInstance().HOST, App.getInstance().PORT).addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(ChannelFuture future) throws Exception {
+                        if (future.isSuccess()) {
+                            isConnect = true;
+                            Logger.i(TAG, "Connect to server successfully!");
+                        } else {
+                            isConnect = false;
+                            Logger.i(TAG, "Failed to connect to server，After 10s, the connection will be reconnected");
+                            future.channel().eventLoop().schedule(new Runnable() {
+                                @Override
+                                public void run() {
+                                    sendReconnectMessage();
+                                }
+                            }, 10, TimeUnit.SECONDS);
+                        }
+                    }
+                }).sync().channel();
+                // 当代客户端链路关闭
+                mChannel.closeFuture().sync();
+            } catch (Exception e) {
+                Logger.e(TAG, "channel connect exception", e);
+                sendReconnectMessage();
+            }
+        }
+    }
+
+    private void sendReconnectMessage() {
+        if (NetUtils.isNetworkAvailable(App.getInstance())) {
+            mWorkHandler.sendEmptyMessage(MESSAGE_CONNECT);
+        } else {
+            Logger.e(TAG, "sendReconnectMessage failed ，网络异常");
+        }
+    }
+
+    public void sendMessage(String msg) {
+        Message message = new Message();
+        message.what = MESSAGE_SEND;
+        Bundle bundle = new Bundle();
+        bundle.putString(ACTION_SEND_MSG, msg);
+        message.setData(bundle);
+        mWorkHandler.sendMessage(message);
+    }
 }
