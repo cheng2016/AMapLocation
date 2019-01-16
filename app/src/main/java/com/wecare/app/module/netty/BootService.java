@@ -192,7 +192,7 @@ public class BootService extends Service implements MainContract.View {
                 location.getSpeed(), location.getBearing(), gpsCount, location.getAccuracy(), positionType, location.getTime(), lastPositionTime, "");
         content = StringTcpUtils.buildGpsString(imei, content);
         if (NetUtils.isNetworkAvalible(this)) {
-            sendMsg(content);
+            sendMessage(content);
         } else {
             if (mLocationDaoUtils == null) {
                 mLocationDaoUtils = new LocationDaoUtils(this);
@@ -299,8 +299,7 @@ public class BootService extends Service implements MainContract.View {
                     String[] results = message.split("\\|");
                     if (results[5].startsWith("D01")) {
                         //优先回复服务器消息，告诉服务器我已接受到该消息，以免广播接收器太多卡顿
-                        sendMsg(StringTcpUtils.buildSuccessString(imei, results[6]));
-
+                        sendMessage(StringTcpUtils.buildSuccessString(imei, results[6]));
                         int commandType;
                         if (results[5].substring(4).contains("61") || results[5].substring(4).contains("63")) {
                             commandType = Integer.parseInt(results[5].substring(4, 6));
@@ -452,7 +451,7 @@ public class BootService extends Service implements MainContract.View {
         public void onReceive(Context context, Intent intent) {
             Logger.i(TAG, "NetworkStateReceiver is work！ action：" + intent.getAction());
             if (intent.getAction().equals(ConnectivityManager.CONNECTIVITY_ACTION)) {
-                sendMsg(HEART_BEAT_STRING);
+                sendMessage(HEART_BEAT_STRING);
             }
         }
     }
@@ -555,7 +554,6 @@ public class BootService extends Service implements MainContract.View {
 
     private final int MESSAGE_INIT = 0x1;
     private final int MESSAGE_CONNECT = 0x2;
-    private final int MESSAGE_SEND = 0x3;
 
     private HandlerThread workThread = null;
 
@@ -565,32 +563,19 @@ public class BootService extends Service implements MainContract.View {
         @Override
         public boolean handleMessage(Message msg) {
             switch (msg.what) {
-                case MESSAGE_INIT: {
+                case MESSAGE_INIT:
                     Logger.d(TAG, "WorkHandlerCallback 初始化Tcp服务 ....");
                     initNetty();
                     break;
-                }
-                case MESSAGE_CONNECT: {
+
+                case MESSAGE_CONNECT:
                     Logger.d(TAG, "WorkHandlerCallback 连接远程服务器 ....");
                     connectNetty();
                     break;
-                }
-                case MESSAGE_SEND: {
-                    Logger.d(TAG, "WorkHandlerCallback 向服务器发送数据 ....");
-                    String str = (String) msg.obj;
-                    try {
-                        if (mChannel != null && mChannel.isOpen() && isConnect) {
-                            mChannel.writeAndFlush(str).sync();
-                            Logger.d(TAG, "send succeed " + str);
-                        } else {
-                            throw new Exception("channel is null | closed | isConnect：" + isConnect);
-                        }
-                    } catch (Exception e) {
-                        Logger.e(TAG, "send failed ", e);
-                        sendReconnectMessage();
-                    }
+
+                default:
+                    Logger.e(TAG, "WorkHandlerCallback receive unknow message");
                     break;
-                }
             }
             return true;
         }
@@ -660,11 +645,18 @@ public class BootService extends Service implements MainContract.View {
         }
     }
 
-    public void sendMsg(String str) {
-        Message message = new Message();
-        message.what = MESSAGE_SEND;
-        message.obj = str;
-        mWorkHandler.sendMessage(message);
+    public void sendMessage(String sendMsg) {
+        Logger.d(TAG, "向服务器发送数据 .... " + sendMsg);
+        try {
+            if (mChannel != null && mChannel.isOpen() && isConnect) {
+                mChannel.writeAndFlush(sendMsg).sync();
+                Logger.d(TAG, "send succeed " + sendMsg);
+            } else {
+                throw new Exception("channel is null | closed | isConnect：" + isConnect);
+            }
+        } catch (Exception e) {
+            Logger.e(TAG, "send failed ", e);
+            sendReconnectMessage();
+        }
     }
-
 }

@@ -329,11 +329,8 @@ public class NettyService extends Service implements NettyContract.View {
         }
     };
 
-    private final String ACTION_SEND_MSG = "action_send_msg";
-
-    private final int MESSAGE_INIT = 0x01;
-    private final int MESSAGE_CONNECT = 0x02;
-    private final int MESSAGE_SEND = 0x03;
+    private final int MESSAGE_INIT = 100;
+    private final int MESSAGE_CONNECT = 200;
 
     private HandlerThread workThread = null;
 
@@ -351,20 +348,8 @@ public class NettyService extends Service implements NettyContract.View {
                     Logger.d(TAG, "WorkHandlerCallback 连接远程服务器 ....");
                     connectNetty();
                     break;
-                case MESSAGE_SEND:
-                    String sendMsg = msg.getData().getString(ACTION_SEND_MSG);
-                    Logger.d(TAG, "WorkHandlerCallback 向服务器发送数据 .... " + sendMsg);
-                    try {
-                        if (mChannelFuture.channel() != null && mChannelFuture.channel().isOpen() && isConnect) {
-                            mChannelFuture.channel().writeAndFlush(sendMsg).sync();
-                            Logger.d(TAG, "send succeed " + sendMsg);
-                        } else {
-                            throw new Exception("channel is null | closed | isConnect：" + isConnect);
-                        }
-                    } catch (Exception e) {
-                        Logger.e(TAG, "send failed ", e);
-                        sendReconnectMessage();
-                    }
+                default:
+                    Logger.e(TAG, "WorkHandlerCallback receive unknow message");
                     break;
             }
             return true;
@@ -430,17 +415,23 @@ public class NettyService extends Service implements NettyContract.View {
                 mWorkHandler.sendEmptyMessageDelayed(MESSAGE_CONNECT, 10 * 1000);
                 break;
             case NetUtils.NETWORK_NONE:
-                Logger.e(TAG,"sendReconnectMessage 无网络不执行重连操作");
+                Logger.e(TAG, "sendReconnectMessage 无网络不执行重连操作");
                 break;
         }
     }
 
-    public void sendMessage(String msg) {
-        Message message = new Message();
-        message.what = MESSAGE_SEND;
-        Bundle bundle = new Bundle();
-        bundle.putString(ACTION_SEND_MSG, msg);
-        message.setData(bundle);
-        mWorkHandler.sendMessage(message);
+    public void sendMessage(String sendMsg) {
+        Logger.d(TAG, "向服务器发送数据 .... " + sendMsg);
+        try {
+            if (mChannelFuture.channel() != null && mChannelFuture.channel().isOpen() && isConnect) {
+                mChannelFuture.channel().writeAndFlush(sendMsg).sync();
+                Logger.d(TAG, "send succeed " + sendMsg);
+            } else {
+                throw new Exception("channel is null | closed | isConnect：" + isConnect);
+            }
+        } catch (Exception e) {
+            Logger.e(TAG, "send failed ", e);
+            sendReconnectMessage();
+        }
     }
 }
