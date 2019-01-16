@@ -172,7 +172,7 @@ public class BootService extends Service implements MainContract.View {
         workThread.start();
         mWorkHandler = new Handler(workThread.getLooper(), mWorkHandlerCallback);
         mWorkHandler.sendEmptyMessage(MESSAGE_INIT);
-        mWorkHandler.sendEmptyMessageDelayed(MESSAGE_CONNECT,100);
+        mWorkHandler.sendEmptyMessageDelayed(MESSAGE_CONNECT, 100);
     }
 
 
@@ -191,7 +191,7 @@ public class BootService extends Service implements MainContract.View {
         String content = StringTcpUtils.buildGpsContent(location.getLongitude(), location.getLatitude(), location.getAltitude(),
                 location.getSpeed(), location.getBearing(), gpsCount, location.getAccuracy(), positionType, location.getTime(), lastPositionTime, "");
         content = StringTcpUtils.buildGpsString(imei, content);
-        if (NetUtils.isNetworkAvailable(this)) {
+        if (NetUtils.isNetworkAvalible(this)) {
             sendMsg(content);
         } else {
             if (mLocationDaoUtils == null) {
@@ -379,14 +379,16 @@ public class BootService extends Service implements MainContract.View {
         ////断开连接触发channelInactive
         @Override
         public void channelInactive(ChannelHandlerContext ctx) {
-            // TODO: 重连操作
             Logger.e(TAG, "channelInactive 掉线了");
+            isConnect = false;
+            // TODO: 重连操作
             sendReconnectMessage();
         }
 
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable throwable) {
             Logger.e(TAG, "exceptionCaught", throwable);
+            isConnect = false;
             ctx.close();
         }
     }
@@ -551,8 +553,6 @@ public class BootService extends Service implements MainContract.View {
     //碰撞时间
     long collisionTime;
 
-    private final String ACTION_SEND_MSG = "action_send_msg";
-
     private final int MESSAGE_INIT = 0x1;
     private final int MESSAGE_CONNECT = 0x2;
     private final int MESSAGE_SEND = 0x3;
@@ -596,7 +596,7 @@ public class BootService extends Service implements MainContract.View {
         }
     };
 
-    private void initNetty(){
+    private void initNetty() {
         mBootstrap = new Bootstrap();
         eventLoopGroup = new NioEventLoopGroup();
         mBootstrap.group(eventLoopGroup);
@@ -620,7 +620,7 @@ public class BootService extends Service implements MainContract.View {
         });
     }
 
-    private void connectNetty(){
+    private void connectNetty() {
         if (!isClose && !isConnect) {
             try {
                 // 发起异步连接操作
@@ -632,13 +632,7 @@ public class BootService extends Service implements MainContract.View {
                             Logger.i(TAG, "Connect to server successfully!");
                         } else {
                             isConnect = false;
-                            Logger.i(TAG, "Failed to connect to server，After 10s, the connection will be reconnected");
-                            future.channel().eventLoop().schedule(new Runnable() {
-                                @Override
-                                public void run() {
-                                    sendReconnectMessage();
-                                }
-                            }, 10, TimeUnit.SECONDS);
+                            Logger.i(TAG, "Failed to connect to server，After the connection will be reconnected");
                         }
                     }
                 }).sync().channel();
@@ -652,10 +646,17 @@ public class BootService extends Service implements MainContract.View {
     }
 
     private void sendReconnectMessage() {
-        if (NetUtils.isNetworkAvailable(App.getInstance())) {
-            mWorkHandler.sendEmptyMessage(MESSAGE_CONNECT);
-        } else {
-            Logger.e(TAG, "sendReconnectMessage failed ，网络异常");
+        int netWorkState = NetUtils.getNetworkState(App.getInstance());
+        switch (netWorkState) {
+            case NetUtils.NETWORK_MOBILE:// 移动网络 8 秒重连一次
+                mWorkHandler.sendEmptyMessageDelayed(MESSAGE_CONNECT, 8 * 1000);
+                break;
+            case NetUtils.NETWORK_WIFI:// wifi网络 10 秒重连一次
+                mWorkHandler.sendEmptyMessageDelayed(MESSAGE_CONNECT, 10 * 1000);
+                break;
+            case NetUtils.NETWORK_NONE:
+                Logger.e(TAG,"sendReconnectMessage 无网络不执行重连操作");
+                break;
         }
     }
 

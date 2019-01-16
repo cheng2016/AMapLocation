@@ -139,7 +139,7 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
                 long requestQR = PreferenceUtils.getPrefLong(this, PreferenceConstants.QUERY_QR_TIME, 0);
                 //补偿机制，解决长时间计时不准确的问题
                 if (System.currentTimeMillis() - requestQR >= ONE_DAY || TextUtils.isEmpty(qrUrl)) {
-                    Logger.i(TAG,"--------------超过指定时间刷新二维码-------------------");
+                    Logger.i(TAG, "--------------超过指定时间刷新二维码-------------------");
                     mMainPresenter.queryZxingQr();
                 }
                 break;
@@ -204,14 +204,14 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
     @Override
     public void queryBusinessSucess(QueryBusinessResp resp) {
         if (resp != null && resp.getData() != null) {
-            if(!TextUtils.isEmpty(resp.getData().getHead_image_url())
-                    && !TextUtils.isEmpty(resp.getData().getNick_name())){
+            if (!TextUtils.isEmpty(resp.getData().getHead_image_url())
+                    && !TextUtils.isEmpty(resp.getData().getNick_name())) {
                 headUrl = resp.getData().getHead_image_url();
                 nickName = resp.getData().getNick_name();
                 showWxing();
                 //下载图片到本地，并写入系统设置
                 mMainPresenter.loadImageToSettings(this, headUrl);
-             } else {
+            } else {
                 headUrl = "";
                 nickName = "";
                 mMainPresenter.queryZxingQr();
@@ -443,10 +443,8 @@ public class MainActivity extends CheckPermissionsActivity implements MainContra
             String action = intent.getAction();
             Logger.i(TAG, "NetworkStateReceiver is work， action：" + action);
             if (action.equals(ConnectivityManager.CONNECTIVITY_ACTION)) {
-                if (NetUtils.isNetworkAvailable(MainActivity.this)) {
-                    if (mSocketService != null)
-                        mSocketService.sendMessage(mSocketService.HEART_BEAT_STRING);
-                }
+                if (mSocketService != null)
+                    mSocketService.sendMessage(mSocketService.HEART_BEAT_STRING);
             }
             if (action.equals(Intent.ACTION_AIRPLANE_MODE_CHANGED)) {// 飞行模式状态改变
                 // To Do

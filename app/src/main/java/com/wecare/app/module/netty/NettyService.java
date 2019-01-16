@@ -81,7 +81,7 @@ public class NettyService extends Service implements NettyContract.View {
 
     private EventLoopGroup eventLoopGroup;
 
-    private Channel mChannel;
+    ChannelFuture mChannelFuture;
 
     private boolean isConnect = false;
 
@@ -251,12 +251,12 @@ public class NettyService extends Service implements NettyContract.View {
             if (evt instanceof IdleStateEvent) {
                 IdleStateEvent event = (IdleStateEvent) evt;
                 if (event.state().equals(IdleState.READER_IDLE)) {
-                    Logger.i(TAG, "userEventTriggered READER_IDLE 读超时，长期没收到服务器推送数据！Channel is active：" + mChannel.isActive());
+                    Logger.i(TAG, "userEventTriggered READER_IDLE 读超时，长期没收到服务器推送数据！Channel is active：" + mChannelFuture.channel().isActive());
                     //可以选择重新连接
                     isConnect = false;
                     ctx.close();
                 } else if (event.state().equals(IdleState.WRITER_IDLE)) {
-                    Logger.i(TAG, "userEventTriggered WRITER_IDLE 写超时，长期未向服务器发送数据！Channel is active：" + mChannel.isActive());
+                    Logger.i(TAG, "userEventTriggered WRITER_IDLE 写超时，长期未向服务器发送数据！Channel is active：" + mChannelFuture.channel().isActive());
                     //发送心跳包
                     Logger.e(TAG, "sendMessage：" + HEART_BEAT_STRING);
                     ctx.writeAndFlush(HEART_BEAT_STRING);
@@ -292,9 +292,9 @@ public class NettyService extends Service implements NettyContract.View {
             Logger.i(TAG, "greendao excute location data size is：" + list.size());
             if (list != null && list.size() > 0) {
                 for (LocationData data : list) {
-                    if (mChannel != null && mChannel.isOpen() && isConnect) {
+                    if (mChannelFuture.channel() != null && mChannelFuture.channel().isOpen() && isConnect) {
                         Logger.e(TAG, "sendMessage：" + data.getContent());
-                        mChannel.writeAndFlush(data.getContent());
+                        mChannelFuture.channel().writeAndFlush(data.getContent());
                         daoUtils.deleteLocationData(data);
                     }
                 }
@@ -331,9 +331,9 @@ public class NettyService extends Service implements NettyContract.View {
 
     private final String ACTION_SEND_MSG = "action_send_msg";
 
-    private final int MESSAGE_INIT = 100;
-    private final int MESSAGE_CONNECT = 200;
-    private final int MESSAGE_SEND = 300;
+    private final int MESSAGE_INIT = 0x01;
+    private final int MESSAGE_CONNECT = 0x02;
+    private final int MESSAGE_SEND = 0x03;
 
     private HandlerThread workThread = null;
 
@@ -352,11 +352,11 @@ public class NettyService extends Service implements NettyContract.View {
                     connectNetty();
                     break;
                 case MESSAGE_SEND:
-                    Logger.d(TAG, "WorkHandlerCallback 向服务器发送数据 ....");
                     String sendMsg = msg.getData().getString(ACTION_SEND_MSG);
+                    Logger.d(TAG, "WorkHandlerCallback 向服务器发送数据 .... " + sendMsg);
                     try {
-                        if (mChannel != null && mChannel.isOpen() && isConnect) {
-                            mChannel.writeAndFlush(sendMsg).sync();
+                        if (mChannelFuture.channel() != null && mChannelFuture.channel().isOpen() && isConnect) {
+                            mChannelFuture.channel().writeAndFlush(sendMsg).sync();
                             Logger.d(TAG, "send succeed " + sendMsg);
                         } else {
                             throw new Exception("channel is null | closed | isConnect：" + isConnect);
@@ -371,7 +371,7 @@ public class NettyService extends Service implements NettyContract.View {
         }
     };
 
-    private void initNetty(){
+    private void initNetty() {
         mBootstrap = new Bootstrap();
         eventLoopGroup = new NioEventLoopGroup();
         mBootstrap.group(eventLoopGroup);
@@ -395,11 +395,11 @@ public class NettyService extends Service implements NettyContract.View {
         });
     }
 
-    private void connectNetty(){
+    private void connectNetty() {
         if (!isConnect) {
             try {
                 // 发起异步连接操作
-                mChannel = mBootstrap.connect(App.getInstance().HOST, App.getInstance().PORT).addListener(new ChannelFutureListener() {
+                mChannelFuture = mBootstrap.connect(App.getInstance().HOST, App.getInstance().PORT).addListener(new ChannelFutureListener() {
                     @Override
                     public void operationComplete(ChannelFuture future) throws Exception {
                         if (future.isSuccess()) {
@@ -407,18 +407,12 @@ public class NettyService extends Service implements NettyContract.View {
                             Logger.i(TAG, "Connect to server successfully!");
                         } else {
                             isConnect = false;
-                            Logger.i(TAG, "Failed to connect to server，After 10s, the connection will be reconnected");
-                            future.channel().eventLoop().schedule(new Runnable() {
-                                @Override
-                                public void run() {
-                                    sendReconnectMessage();
-                                }
-                            }, 10, TimeUnit.SECONDS);
+                            Logger.i(TAG, "Failed to connect to server，After the connection will be reconnected");
                         }
                     }
-                }).sync().channel();
+                }).sync();
                 // 当代客户端链路关闭
-                mChannel.closeFuture().sync();
+                mChannelFuture.channel().closeFuture().sync();
             } catch (Exception e) {
                 Logger.e(TAG, "channel connect exception", e);
                 sendReconnectMessage();
@@ -427,10 +421,17 @@ public class NettyService extends Service implements NettyContract.View {
     }
 
     private void sendReconnectMessage() {
-        if (NetUtils.isNetworkAvailable(App.getInstance())) {
-            mWorkHandler.sendEmptyMessage(MESSAGE_CONNECT);
-        } else {
-            Logger.e(TAG, "sendReconnectMessage failed ，网络异常");
+        int netWorkState = NetUtils.getNetworkState(App.getInstance());
+        switch (netWorkState) {
+            case NetUtils.NETWORK_MOBILE:// 移动网络 8 秒重连一次
+                mWorkHandler.sendEmptyMessageDelayed(MESSAGE_CONNECT, 8 * 1000);
+                break;
+            case NetUtils.NETWORK_WIFI:// wifi网络 10 秒重连一次
+                mWorkHandler.sendEmptyMessageDelayed(MESSAGE_CONNECT, 10 * 1000);
+                break;
+            case NetUtils.NETWORK_NONE:
+                Logger.e(TAG,"sendReconnectMessage 无网络不执行重连操作");
+                break;
         }
     }
 

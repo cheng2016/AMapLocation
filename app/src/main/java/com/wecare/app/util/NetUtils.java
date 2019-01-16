@@ -121,16 +121,59 @@ public class NetUtils {
     }
 
     /**
+     * 判断当前网络是否可用(6.0以上版本)
+     * 实时
+     * @param context
+     * @return
+     */
+    public static boolean isNetSystemUsable(Context context){
+        boolean isNetUsable = false;
+        ConnectivityManager manager = (ConnectivityManager)
+                context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            NetworkCapabilities networkCapabilities =
+                    manager.getNetworkCapabilities(manager.getActiveNetwork());
+            isNetUsable = networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
+        }
+        return isNetUsable;
+    }
+
+    public static boolean isNetworkAvalible(Context context) {
+        // 获得网络状态管理器
+        ConnectivityManager connectivityManager = (ConnectivityManager) context
+                .getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (connectivityManager == null) {
+            return false;
+        } else {
+            // 建立网络数组
+            NetworkInfo[] net_info = connectivityManager.getAllNetworkInfo();
+            if (net_info != null) {
+                for (int i = 0; i < net_info.length; i++) {
+                    // 判断获得的网络状态是否是处于连接状态
+                    if (net_info[i].getState() == NetworkInfo.State.CONNECTED) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
      * 判断网络是否连接，并且可访问网络
      * 当NetworkCapabilities的描述中有VALIDATED这个描述时，此网络是真正可用的
      *
      * @param context
      * @return
      */
+/*
     public static boolean isNetworkAvailable(Context context) {
         ConnectivityManager cm = (ConnectivityManager) context
                 .getSystemService(Activity.CONNECTIVITY_SERVICE);
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.M) {
+        NetworkInfo info = cm.getActiveNetworkInfo();
+        return info != null && info.isConnected() && isNetworkOnline();
+*/
+/*        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.M) {
             NetworkCapabilities networkCapabilities = cm.getNetworkCapabilities(cm.getActiveNetwork());
             if (networkCapabilities != null) {
                 Logger.i("Avalible", "NetworkCapalbilities:" + networkCapabilities.toString());
@@ -140,10 +183,11 @@ public class NetUtils {
                 return info != null && info.isConnected() && isNetworkOnline();
             }
         } else {
-            NetworkInfo info = cm.getActiveNetworkInfo();
-            return info != null && info.isConnected() && isNetworkOnline();
-        }
+
+        }*//*
+
     }
+*/
 
     /**
      * 判断wifi是否连接状态
